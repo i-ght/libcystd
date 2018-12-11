@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "libcystd.tests": {
+      "commandName": "Project",
+      "commandLineArgs": "--no-spinner"
+    }
+  }
+}
