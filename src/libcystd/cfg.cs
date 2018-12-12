@@ -1,4 +1,5 @@
-﻿using Optional;
+﻿using LibCyStd.Seq;
+using Optional;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,20 +20,21 @@ namespace LibCyStd
         public IObservable<IReadOnlyDictionary<string, string>> ValuesUpdated { get; }
         public IObservable<(string name, IConvertible value)> ValueUpdated { get; }
 
-        private FileInfo MakeFile(string path)
+        private FileInfo MakeFile(in string path)
         {
             using (_ = File.Create(path)) { }
             return new FileInfo(path);
         }
 
-        private FileInfo LoadFileInfo(string path)
+        private FileInfo LoadFileInfo(in string path)
         {
-            if (!path.InvariantEndsWith(".ini")) path = $"{path}.ini";
-            if (!File.Exists(path)) return MakeFile(path);
-            else return new FileInfo(path);
+            var pathTmp = path;
+            if (!pathTmp.InvariantEndsWith(".ini")) pathTmp = $"{path}.ini";
+            if (!File.Exists(pathTmp)) return MakeFile(pathTmp);
+            else return new FileInfo(pathTmp);
         }
 
-        private IDictionary<string, string> Parse(IEnumerable<string> lines)
+        private IDictionary<string, string> Parse(in IEnumerable<string> lines)
         {
             Option<(string key, string val)> ParseLine(string line)
             {
@@ -52,7 +54,7 @@ namespace LibCyStd
             }
         }
 
-        public Option<T> TryGetValue<T>(string key) where T : IConvertible
+        public Option<T> TryGetValue<T>(in string key) where T : IConvertible
         {
             if (_values.ContainsKey(key))
             {
@@ -70,12 +72,13 @@ namespace LibCyStd
             }
         }
 
-        public void AddOrUpdate<T>(string key, T value) where T : IConvertible
+        public void AddOrUpdate<T>(in string key, in T value) where T : IConvertible
         {
+            var (k, v) = (key, value);
             void OnAddedOrUpdated()
             {
                 _valuesUpdated.OnNext(Values);
-                _valueUpdated.OnNext((key, value));
+                _valueUpdated.OnNext((k, v));
                 Save();
             }
 
@@ -100,7 +103,7 @@ namespace LibCyStd
             _disposed = true;
         }
 
-        public IniCfg(string path)
+        public IniCfg(in string path)
         {
             FileInfo = LoadFileInfo(path);
             _values = Parse(File.ReadAllLines(FileInfo.FullName));

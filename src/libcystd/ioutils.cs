@@ -5,8 +5,6 @@ using System.Threading.Tasks;
 
 namespace LibCyStd
 {
-#if NETSTANDARD2_0
-
     public static class StreamUtils
     {
         public static async Task WriteAsync(this Stream stream, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken)
@@ -20,6 +18,4 @@ namespace LibCyStd
             await stream.WriteAsync(bytes, CancellationToken.None).ConfigureAwait(false);
         }
     }
-
-#endif
 }

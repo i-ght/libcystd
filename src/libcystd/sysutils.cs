@@ -1,4 +1,5 @@
-﻿using Optional;
+﻿using LibCyStd.Seq;
+using Optional;
 using Optional.Unsafe;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace LibCyStd
     /// </summary>
     public static class IDisposableUtils
     {
-        public static void DisposeSeq(IEnumerable<IDisposable> disposables)
+        public static void DisposeSeq(in IEnumerable<IDisposable> disposables)
         {
             foreach (var d in disposables) d.Dispose();
         }
@@ -31,7 +32,7 @@ namespace LibCyStd
         /// throws a new <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <param name="message"></param>
-        public static void InvalidOp(string message)
+        public static void InvalidOp(in string message)
         {
             throw new InvalidOperationException(message);
         }
@@ -41,7 +42,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="inner"></param>
-        public static void InvalidOp(string message, Exception inner)
+        public static void InvalidOp(in string message, in Exception inner)
         {
             throw new InvalidOperationException(message, inner);
         }
@@ -51,7 +52,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="paramName"></param>
-        public static void InvalidArg(string message, string paramName)
+        public static void InvalidArg(in string message, in string paramName)
         {
             throw new ArgumentException(message, paramName);
         }
@@ -60,7 +61,7 @@ namespace LibCyStd
         /// throws a new <see cref="ArgumentNullException"/>.
         /// </summary>
         /// <param name="paramName"></param>
-        public static void NullArg(string paramName)
+        public static void NullArg(in string paramName)
         {
             throw new ArgumentNullException(paramName);
         }
@@ -69,7 +70,7 @@ namespace LibCyStd
         /// Throws a new <see cref="TimeoutException"/>.
         /// </summary>
         /// <param name="message"></param>
-        public static void Timeout(string message)
+        public static void Timeout(in string message)
         {
             throw new TimeoutException(message);
         }
@@ -79,7 +80,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="inner"></param>
-        public static void Timeout(string message, Exception inner)
+        public static void Timeout(in string message, in Exception inner)
         {
             throw new TimeoutException(message, inner);
         }
@@ -88,7 +89,7 @@ namespace LibCyStd
         /// Reraises <see cref="Exception"/> with stack trace intact.
         /// </summary>
         /// <param name="e"></param>
-        public static void Reraise(Exception e) => ExceptionDispatchInfo.Capture(e).Throw();
+        public static void Reraise(in Exception e) => ExceptionDispatchInfo.Capture(e).Throw();
 
         /// <summary>
         /// Transforms <see cref="Exception"/> into log message.
@@ -130,12 +131,12 @@ namespace LibCyStd
             Rand = new Random();
         }
 
-        public static int Next(int min, int max)
+        public static int Next(in int min, in int max)
         {
             lock (Rand) return Rand.Next(min, max);
         }
 
-        public static int Next(int max)
+        public static int Next(in int max)
         {
             lock (Rand) return Rand.Next(max);
         }
@@ -153,14 +154,14 @@ namespace LibCyStd
             Epoch = new DateTimeOffset(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
         }
 
-        public static TimeSpan UnixTimeSpan(DateTimeOffset input) => input - Epoch;
+        public static TimeSpan UnixTimeSpan(in DateTimeOffset input) => input - Epoch;
 
         public static long UnixMillis() => (long)UnixTimeSpan(DateTimeOffset.Now).TotalMilliseconds;
     }
 
     public static class MemoryUtils
     {
-        public static T[] AsArray<T>(this ReadOnlyMemory<T> memory)
+        public static T[] AsArray<T>(this in ReadOnlyMemory<T> memory)
         {
             if (!MemoryMarshal.TryGetArray(memory, out var segment))
                 ExnUtils.InvalidOp("memory did not contain array");
@@ -173,28 +174,39 @@ namespace LibCyStd
     /// </summary>
     public static class StringUtils
     {
+        public static Option<(string key, string val)> TryParseKvp(in string input, in char delimter)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return Option.None<(string key, string val)>();
+
+            var sp = input.Split(new[] { delimter }, StringSplitOptions.RemoveEmptyEntries);
+            if (sp.Length != 2)
+                return Option.None<(string key, string val)>();
+            return (sp[0], sp[1]).Some();
+        }
+
         public static ReadOnlySpan<byte> ToBytesSpan(this string str) =>
             Encoding.UTF8.GetBytes(str).AsSpan();
 
-        public static string OfReadOnlyMemory(ReadOnlyMemory<byte> bytes) =>
+        public static string OfReadOnlyMemory(in ReadOnlyMemory<byte> bytes) =>
             Encoding.UTF8.GetString(bytes.AsArray());
 
-        public static bool InvariantEquals(this string str1, string str2) =>
+        public static bool InvariantEquals(this string str1, in string str2) =>
             string.Equals(str1, str2, StringComparison.OrdinalIgnoreCase);
 
-        public static bool InvariantStartsWith(this string input, string value) =>
+        public static bool InvariantStartsWith(this string input, in string value) =>
             input.StartsWith(value, StringComparison.OrdinalIgnoreCase);
 
-        public static bool InvariantEndsWith(this string input, string value) =>
+        public static bool InvariantEndsWith(this string input, in string value) =>
             input.EndsWith(value, StringComparison.OrdinalIgnoreCase);
 
-        public static bool InvariantContains(this string input, string value) =>
+        public static bool InvariantContains(this string input, in string value) =>
             input.IndexOf(value, StringComparison.OrdinalIgnoreCase) > -1;
 
-        public static bool AllNotEmptyOrWhiteSpace(IEnumerable<string> strings) =>
+        public static bool AllNotEmptyOrWhiteSpace(in IEnumerable<string> strings) =>
             strings.All(s => !string.IsNullOrWhiteSpace(s));
 
-        public static bool AnyEmptyOrWhiteSpace(IEnumerable<string> strings) =>
+        public static bool AnyEmptyOrWhiteSpace(in IEnumerable<string> strings) =>
             strings.Any(string.IsNullOrWhiteSpace);
     }
 
@@ -234,10 +246,10 @@ namespace LibCyStd
     /// </summary>
     public static class ReadOnlyMemoryUtils
     {
-        public static ReadOnlyMemory<byte> OfString(string s) =>
+        public static ReadOnlyMemory<byte> OfString(in string s) =>
             new ReadOnlyMemory<byte>(Encoding.UTF8.GetBytes(s));
 
-        public static ReadOnlyMemory<T> OfSeq<T>(IEnumerable<T> seq) =>
+        public static ReadOnlyMemory<T> OfSeq<T>(in IEnumerable<T> seq) =>
             new ReadOnlyMemory<T>(ArrayUtils.OfSeq(seq));
     }
 
@@ -251,13 +263,13 @@ namespace LibCyStd
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static Option<WebProxy> TryParse(string input)
+        public static Option<WebProxy> TryParse(in string input)
         {
             var sp = input.Split(':');
 
-            Option<WebProxy> TryParse2()
+            Option<WebProxy> TryParse2(in string _input)
             {
-                try { return Option.Some(new WebProxy(input)); }
+                try { return Option.Some(new WebProxy(_input)); }
                 catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                 {
                     return Option.None<WebProxy>();
@@ -276,7 +288,7 @@ namespace LibCyStd
                 }
             }
 
-            if (sp.Length == 2 && StringUtils.AllNotEmptyOrWhiteSpace(sp)) return TryParse2();
+            if (sp.Length == 2 && StringUtils.AllNotEmptyOrWhiteSpace(sp)) return TryParse2(input);
             else if (sp.Length == 4 && StringUtils.AllNotEmptyOrWhiteSpace(sp)) return TryParse4();
             else return Option.None<WebProxy>();
         }

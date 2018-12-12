@@ -3,7 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LibCyStd
+namespace LibCyStd.Tasks
 {
     public static class TaskUtils
     {

@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 
-namespace LibCyStd
+namespace LibCyStd.Seq
 {
     /// <summary>
     /// <see cref="IEnumerable{T}"/> utility functions.
@@ -31,7 +31,7 @@ namespace LibCyStd
         /// <param name="chooser"></param>
         /// <returns></returns>
         public static IEnumerable<TResult> Choose<T, TResult>(
-            this IEnumerable<T> seq, Func<T, Option<TResult>> chooser)
+            this IEnumerable<T> seq, in Func<T, Option<TResult>> chooser)
         {
             return
                 seq.Select(chooser)
@@ -39,7 +39,19 @@ namespace LibCyStd
                 .Select(opt => opt.ValueOrFailure());
         }
 
-        public static IEnumerable<string> OfFile(string path) => File.ReadLines(path);
+        public static IEnumerable<string> OfFile(in string path)
+            => File.ReadLines(path);
+
+        public static Option<T> TryFind<T>(this IEnumerable<T> seq, Func<T, bool> predicate)
+        {
+            foreach (var item in seq)
+            {
+                if (predicate(item))
+                    return item.Some();
+            }
+
+            return Option.None<T>();
+        }
     }
 
     /// <summary>
@@ -53,7 +65,7 @@ namespace LibCyStd
         /// <typeparam name="T"></typeparam>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static List<T> OfSeq<T>(IEnumerable<T> sequence)
+        public static List<T> OfSeq<T>(in IEnumerable<T> sequence)
         {
             if (sequence is List<T> list) return list;
             else return sequence.ToList();
@@ -65,7 +77,7 @@ namespace LibCyStd
     /// </summary>
     public static class ReadOnlyCollectionUtils
     {
-        public static ReadOnlyCollection<T> OfSeq<T>(IEnumerable<T> sequence)
+        public static ReadOnlyCollection<T> OfSeq<T>(in IEnumerable<T> sequence)
         {
             if (sequence is ReadOnlyCollection<T> r) return r;
             else return new ReadOnlyCollection<T>(ListUtils.OfSeq(sequence));
@@ -84,19 +96,24 @@ namespace LibCyStd
         /// <typeparam name="TValue"></typeparam>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static IDictionary<TKey, TValue> OfSeq<TKey, TValue>(IEnumerable<(TKey, TValue)> sequence, IEqualityComparer<TKey> equalityComparer)
+        public static IDictionary<TKey, TValue> OfSeq<TKey, TValue>(
+            in IEnumerable<(TKey, TValue)> sequence,
+            in IEqualityComparer<TKey> equalityComparer)
         {
             var d = new Dictionary<TKey, TValue>(sequence.Len(), equalityComparer);
             foreach (var (key, value) in sequence) d.Add(key, value);
             return d;
         }
 
-        public static IDictionary<TKey, TValue> OfSeq<TKey, TValue>(IEnumerable<(TKey, TValue)> sequence)
+        public static IDictionary<TKey, TValue> OfSeq<TKey, TValue>(
+            in IEnumerable<(TKey, TValue)> sequence)
         {
             return OfSeq(sequence, EqualityComparer<TKey>.Default);
         }
 
-        public static Option<TValue> TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
+        public static Option<TValue> TryGetValue<TKey, TValue>(
+            this IDictionary<TKey, TValue> dict,
+            in TKey key)
         {
             if (dict.TryGetValue(key, out var value)) return Option.Some(value);
             else return Option.None<TValue>();
@@ -115,16 +132,22 @@ namespace LibCyStd
         /// <typeparam name="TValue"></typeparam>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static IReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(IEnumerable<(TKey, TValue)> sequence, IEqualityComparer<TKey> equalityComparer)
-            => new ReadOnlyDictionary<TKey, TValue>(DictUtils.OfSeq(sequence, equalityComparer));
+        public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
+            in IEnumerable<(TKey, TValue)> sequence,
+            in IEqualityComparer<TKey> equalityComparer
+        ) => new ReadOnlyDictionary<TKey, TValue>(DictUtils.OfSeq(sequence, equalityComparer));
 
-        public static IReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(IEnumerable<(TKey, TValue)> sequence)
-            => OfSeq(sequence, EqualityComparer<TKey>.Default);
+        public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
+            in IEnumerable<(TKey, TValue)> sequence
+        ) => OfSeq(sequence, EqualityComparer<TKey>.Default);
 
-        public static IReadOnlyDictionary<TKey, TValue> OfDict<TKey, TValue>(IDictionary<TKey, TValue> d)
-            => new ReadOnlyDictionary<TKey, TValue>(d);
+        public static ReadOnlyDictionary<TKey, TValue> OfDict<TKey, TValue>(
+            in IDictionary<TKey, TValue> d
+        ) => new ReadOnlyDictionary<TKey, TValue>(d);
 
-        public static Option<TValue> TryGetValue<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dict, TKey key)
+        public static Option<TValue> TryGetValue<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> dict,
+            in TKey key)
         {
             if (dict.TryGetValue(key, out var value)) return Option.Some(value);
             else return Option.None<TValue>();
@@ -143,7 +166,7 @@ namespace LibCyStd
             return item;
         }
 
-        public static Queue<T> OfSeq<T>(IEnumerable<T> seq) => new Queue<T>(seq);
+        public static Queue<T> OfSeq<T>(in IEnumerable<T> seq) => new Queue<T>(seq);
 
         public static void Shuffle<T>(this Queue<T> queue)
         {
@@ -201,7 +224,7 @@ namespace LibCyStd
         /// <typeparam name="T"></typeparam>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static T[] OfSeq<T>(IEnumerable<T> sequence)
+        public static T[] OfSeq<T>(in IEnumerable<T> sequence)
         {
             if (sequence is T[] array) return array;
             else return sequence.ToArray();

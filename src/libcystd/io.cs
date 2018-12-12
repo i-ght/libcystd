@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Optional;
 
-namespace LibCyStd
+namespace LibCyStd.IO
 {
     /// <summary>
     /// Base class for blacklist kinds
@@ -50,7 +50,7 @@ namespace LibCyStd
         /// <exception cref="System.Security.SecurityException" />
         /// <exception cref="UnauthorizedAccessException" />
         /// <exception cref="PathTooLongException" />
-        public Blacklist(BlacklistKind kind)
+        public Blacklist(in BlacklistKind kind)
         {
             if (kind is FileBlacklist fileBlacklist)
             {
@@ -177,7 +177,7 @@ namespace LibCyStd
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public void ThreadSafeAdd(string item)
+        public void ThreadSafeAdd(in string item)
         {
             Check();
             lock (_set) if (_set.Add(item)) Write(item);
@@ -189,7 +189,7 @@ namespace LibCyStd
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public void ThreadSafeAdd(IEnumerable<string> items)
+        public void ThreadSafeAdd(in IEnumerable<string> items)
         {
             Check();
             lock (_set) Write(items.Where(_set.Add));
@@ -201,7 +201,7 @@ namespace LibCyStd
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public bool ThreadSafeContains(string item)
+        public bool ThreadSafeContains(in string item)
         {
             Check();
             lock (_set) return _set.Contains(item);
@@ -213,7 +213,7 @@ namespace LibCyStd
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public bool Contains(string item)
+        public bool Contains(in string item)
         {
             Check();
             return _set.Contains(item);
@@ -248,7 +248,7 @@ namespace LibCyStd
             get { lock (_set) return _set.Count; }
         }
 
-        public WriteWorker(string pathToFile)
+        public WriteWorker(in string pathToFile)
         {
             _pathToFile = pathToFile;
             _cts = new CancellationTokenSource();
@@ -317,14 +317,14 @@ namespace LibCyStd
         /// Adds the items to the cache to be written.
         /// </summary>
         /// <param name="items"></param>
-        public void Add(IEnumerable<string> items)
+        public void Add(in IEnumerable<string> items)
         {
             Check();
             lock (_set)
                 foreach (var item in items) _set.Add(item);
         }
 
-        public void Add(string item)
+        public void Add(in string item)
         {
             Check();
             lock (_set)
