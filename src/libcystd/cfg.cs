@@ -60,8 +60,10 @@ namespace LibCyStd
             {
                 try { return Option.Some((T)Convert.ChangeType(_values[key], typeof(T))); }
                 catch (Exception e) when
-                    (e is InvalidCastException || e is FormatException
-                    || e is OverflowException || e is ArgumentNullException)
+                    (e is InvalidCastException
+                    || e is FormatException
+                    || e is OverflowException
+                    || e is ArgumentNullException)
                 {
                     return Option.None<T>();
                 }

@@ -15,12 +15,31 @@ namespace LibCyStd
     /// <summary>
     /// <see cref="IDisposable"/> utility functions.
     /// </summary>
-    public static class IDisposableUtils
+    public static class DisposableUtils
     {
+        public static void Dispose(in IDisposable d) => d.Dispose();
+        public static void Dispose(IDisposable d) => Dispose(in d);
+
         public static void DisposeSeq(in IEnumerable<IDisposable> disposables)
         {
-            foreach (var d in disposables) d.Dispose();
+            foreach (var d in disposables)
+                d.Dispose();
         }
+    }
+
+    public static class SysUtils
+    {
+        /// <summary>
+        /// Identity function
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static T Id<T>(in T value) => value;
+        public static T Id<T>(T value) => Id(in value);
+
+        public static string ToString<T>(in T obj) => obj.ToString();
+        public static string ToString<T>(T obj) => ToString(in obj);
     }
 
     /// <summary>
@@ -103,17 +122,21 @@ namespace LibCyStd
             var date = $"Date: {DateTimeOffset.Now.ToString("D")}";
             var time = $"Time: {DateTimeOffset.Now.ToString("T")}";
             var msg = $"Message: {ex.Message}";
-            var stack = $"STack trace: {ex.StackTrace}";
+            var stack = $"StAcK TrAcE: {ex.StackTrace}";
 
-            var list = ReadOnlyCollectionUtils.OfSeq(new List<string>
-            {
-                src,
-                @type,
-                date,
-                time,
-                msg,
-                stack
-            });
+            var list = ReadOnlyCollectionUtils.OfSeq(
+                ListUtils.OfSeq(
+                    new[]
+                    {
+                        src,
+                        @type,
+                        date,
+                        time,
+                        msg,
+                        stack
+                    }
+                )
+            );
 
             return string.Join(Environment.NewLine, list);
         }
@@ -147,7 +170,7 @@ namespace LibCyStd
     /// </summary>
     public static class DateTimeOffsetUtils
     {
-        public static DateTimeOffset Epoch { get; }
+        public static readonly DateTimeOffset Epoch;
 
         static DateTimeOffsetUtils()
         {
@@ -174,14 +197,38 @@ namespace LibCyStd
     /// </summary>
     public static class StringUtils
     {
+        public static string[] SplitRemoveEmpty(this string input, in char delimter)
+            => input.Split(new[] { delimter }, StringSplitOptions.RemoveEmptyEntries);
+        
+
+        public static string[] SplitRemoveEmpty(this string input, in string delimter)
+            => input.Split(delimter.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        public static string Trim(in string input) => input.Trim();
+        public static string Trim(string input) => Trim(in input);
+
+        public static Option<(string key, string val)> TryParseKvp(in string input, in string delimter)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return Option.None<(string key, string val)>();
+
+            var sp = SplitRemoveEmpty(input, delimter);
+            if (sp.Length != 2)
+                return Option.None<(string key, string val)>();
+
+            return (sp[0], sp[1]).Some();
+        }
+
         public static Option<(string key, string val)> TryParseKvp(in string input, in char delimter)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return Option.None<(string key, string val)>();
 
-            var sp = input.Split(new[] { delimter }, StringSplitOptions.RemoveEmptyEntries);
+            var sp = SplitRemoveEmpty(input, delimter);
             if (sp.Length != 2)
                 return Option.None<(string key, string val)>();
+
             return (sp[0], sp[1]).Some();
         }
 
@@ -215,29 +262,43 @@ namespace LibCyStd
     /// </summary>
     public static class OptionUtils
     {
-        public static async Task MatchSomeAsync<T>(this Option<T> option, Func<T, Task> action)
+        public static bool HasValue<T>(this in Option<T> opt) => opt.HasValue;
+        public static bool HasValue<T>(this Option<T> opt) => HasValue(in opt);
+
+        public static T Value<T>(this in Option<T> opt) => opt.ValueOrFailure();
+        public static T Value<T>(this Option<T> opt) => Value(in opt);
+
+        public static Task MatchSomeAsync<T>(this in Option<T> option, in Func<T, Task> action)
         {
-            if (option.HasValue) await action(option.ValueOrFailure()).ConfigureAwait(false);
+            if (option.HasValue) return action(option.ValueOrFailure());
+            else return Task.CompletedTask;
         }
 
-        public static async Task MatchAsync<T>(this Option<T> option, Func<T, Task> some, Func<Task> none)
+        public static Task MatchAsync<T>(this in Option<T> option, in Func<T, Task> some, in Func<Task> none)
         {
-            if (option.HasValue) await some(option.ValueOrFailure()).ConfigureAwait(false);
-            else await none().ConfigureAwait(false);
+            if (option.HasValue) return some(option.ValueOrFailure());
+            else return none();
         }
 
-        public static async Task MatchAsync<T>(this Option<T> option, Func<T, Task> some, Action none)
+        public static Task MatchAsync<T>(this in Option<T> option, in Func<T, Task> some, in Action none)
         {
-            if (option.HasValue) await some(option.ValueOrFailure()).ConfigureAwait(false);
-            else none();
+            if (option.HasValue)
+            {
+                return some(option.ValueOrFailure());
+            }
+            else
+            {
+                none();
+                return Task.CompletedTask;
+            }
         }
 
-        public static async Task<TResult> MatchAsync<TResult, T>(this Option<T> option, Func<T, Task<TResult>> someAction, Func<Task<TResult>> noneAction)
+        public static Task<TResult> MatchAsync<TResult, T>(this in Option<T> option, in Func<T, Task<TResult>> someAction, Func<Task<TResult>> noneAction)
         {
             return
                 option.HasValue
-                ? await someAction(option.ValueOrFailure()).ConfigureAwait(false)
-                : await noneAction().ConfigureAwait(false);
+                ? someAction(option.ValueOrFailure())
+                : noneAction();
         }
     }
 
@@ -265,7 +326,7 @@ namespace LibCyStd
         /// <returns></returns>
         public static Option<WebProxy> TryParse(in string input)
         {
-            var sp = input.Split(':');
+            var sp = StringUtils.SplitRemoveEmpty(input, ':');
 
             Option<WebProxy> TryParse2(in string _input)
             {

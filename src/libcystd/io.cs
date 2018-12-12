@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NetUV.Core.Handles;
 using Optional;
 
 namespace LibCyStd.IO
@@ -239,7 +240,6 @@ namespace LibCyStd.IO
         private readonly HashSet<string> _set;
 
         private bool _disposed;
-        private bool _started;
 
         public int Count => _set.Count;
 
@@ -248,27 +248,10 @@ namespace LibCyStd.IO
             get { lock (_set) return _set.Count; }
         }
 
-        public WriteWorker(in string pathToFile)
-        {
-            _pathToFile = pathToFile;
-            _cts = new CancellationTokenSource();
-            _set = new HashSet<string>();
-        }
-
-        private void CheckIfNotStarted()
-        {
-            if (!_started) ExnUtils.InvalidOp("WriteWorker must call Start.");
-        }
 
         private void CheckDisposed()
         {
             if (_disposed) throw new ObjectDisposedException(GetType().Name);
-        }
-
-        private void Check()
-        {
-            CheckDisposed();
-            CheckIfNotStarted();
         }
 
         private async Task WriteLoop()
@@ -279,20 +262,18 @@ namespace LibCyStd.IO
                 {
                     if (_cts.IsCancellationRequested) return;
                     await Task.Delay(10000, _cts.Token).ConfigureAwait(false);
-                    if (_set.Count > 1000) Write();
+                    if (_set.Count > 1000) WriteSet();
                 }
             }
             catch (OperationCanceledException) { }
-            finally { Write(); }
+            finally { WriteSet(); }
         }
 
         /// <summary>
         /// Writes the cached contents of the write worker.
         /// </summary>
-        public void Write()
+        private void WriteSet()
         {
-            Check();
-
             lock (_set)
             {
                 if (_set.Count == 0) return;
@@ -305,12 +286,11 @@ namespace LibCyStd.IO
                 _set.Clear();
             }
         }
-
-        public void Start()
+        
+        public void Write()
         {
-            if (_started) ExnUtils.InvalidOp("Already started this WriteWorker.");
-            _ = Task.Run(WriteLoop);
-            _started = true;
+            CheckDisposed();
+            WriteSet();
         }
 
         /// <summary>
@@ -319,14 +299,14 @@ namespace LibCyStd.IO
         /// <param name="items"></param>
         public void Add(in IEnumerable<string> items)
         {
-            Check();
+            CheckDisposed();
             lock (_set)
                 foreach (var item in items) _set.Add(item);
         }
 
         public void Add(in string item)
         {
-            Check();
+            CheckDisposed();
             lock (_set)
                 _set.Add(item);
         }
@@ -338,5 +318,14 @@ namespace LibCyStd.IO
             _cts.Dispose();
             _disposed = true;
         }
+        
+        public WriteWorker(in string pathToFile)
+        {
+            _pathToFile = pathToFile;
+            _cts = new CancellationTokenSource();
+            _set = new HashSet<string>();
+            _ = Task.Run(WriteLoop);
+        }
+
     }
 }

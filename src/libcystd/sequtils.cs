@@ -23,6 +23,27 @@ namespace LibCyStd.Seq
         }
 
         /// <summary>
+        /// For each function
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="seq"></param>
+        /// <param name="action"></param>
+        public static void ForEach<T>(this IEnumerable<T> seq, in Action<T> action)
+        {
+            foreach (var value in seq)
+                action(value);
+        }
+
+        /// <summary>
+        /// For each function
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="seq"></param>
+        /// <param name="action"></param>
+        public static void ForEach<T>(this IEnumerable<T> seq, Action<T> action) => ForEach(seq, in action);
+        
+
+        /// <summary>
         /// Applies chooser to each item in the sequence. If chooser returns Some, item is added to result. If chooser returns None, item is discarded.
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -33,16 +54,17 @@ namespace LibCyStd.Seq
         public static IEnumerable<TResult> Choose<T, TResult>(
             this IEnumerable<T> seq, in Func<T, Option<TResult>> chooser)
         {
-            return
-                seq.Select(chooser)
-                .Where(item => item.HasValue)
-                .Select(opt => opt.ValueOrFailure());
+            return 
+                seq
+                .Select(chooser)
+                .Where(OptionUtils.HasValue)
+                .Select(OptionUtils.Value);
         }
 
         public static IEnumerable<string> OfFile(in string path)
             => File.ReadLines(path);
 
-        public static Option<T> TryFind<T>(this IEnumerable<T> seq, Func<T, bool> predicate)
+        public static Option<T> TryFind<T>(this IEnumerable<T> seq, in Func<T, bool> predicate)
         {
             foreach (var item in seq)
             {
@@ -95,6 +117,7 @@ namespace LibCyStd.Seq
         /// <typeparam name="TKey"></typeparam>
         /// <typeparam name="TValue"></typeparam>
         /// <param name="sequence"></param>
+        /// <param name="equalityComparer"></param>
         /// <returns></returns>
         public static IDictionary<TKey, TValue> OfSeq<TKey, TValue>(
             in IEnumerable<(TKey, TValue)> sequence,
@@ -131,6 +154,7 @@ namespace LibCyStd.Seq
         /// <typeparam name="TKey"></typeparam>
         /// <typeparam name="TValue"></typeparam>
         /// <param name="sequence"></param>
+        /// <param name="equalityComparer"></param>
         /// <returns></returns>
         public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
             in IEnumerable<(TKey, TValue)> sequence,
@@ -149,8 +173,9 @@ namespace LibCyStd.Seq
             this IReadOnlyDictionary<TKey, TValue> dict,
             in TKey key)
         {
-            if (dict.TryGetValue(key, out var value)) return Option.Some(value);
-            else return Option.None<TValue>();
+            return dict.TryGetValue(key, out var value) 
+                ? Option.Some(value) 
+                : Option.None<TValue>();
         }
     }
 
