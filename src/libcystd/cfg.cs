@@ -1,5 +1,5 @@
 ﻿using LibCyStd.Seq;
-using Optional;
+using OneOf.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,8 +39,8 @@ namespace LibCyStd
             Option<(string key, string val)> ParseLine(string line)
             {
                 var sp = line.Split('=');
-                if (sp.Length != 2 || StringUtils.AnyEmptyOrWhiteSpace(sp)) return Option.None<(string, string)>();
-                else return Option.Some((sp[0], sp[1]));
+                if (sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp)) return None.Value;
+                else return (sp[0], sp[1]);
             }
             return DictUtils.OfSeq(lines.Choose(ParseLine));
         }
@@ -58,19 +58,19 @@ namespace LibCyStd
         {
             if (_values.ContainsKey(key))
             {
-                try { return Option.Some((T)Convert.ChangeType(_values[key], typeof(T))); }
+                try { return (T)Convert.ChangeType(_values[key], typeof(T)); }
                 catch (Exception e) when
                     (e is InvalidCastException
                     || e is FormatException
                     || e is OverflowException
                     || e is ArgumentNullException)
                 {
-                    return Option.None<T>();
+                    return None.Value;
                 }
             }
             else
             {
-                return Option.None<T>();
+                return None.Value;
             }
         }
 
@@ -112,6 +112,8 @@ namespace LibCyStd
             Values = ReadOnlyDictUtils.OfDict(_values);
             _valuesUpdated = new Subject<IReadOnlyDictionary<string, string>>();
             _valueUpdated = new Subject<(string name, IConvertible value)>();
+            ValuesUpdated = _valuesUpdated;
+            ValueUpdated = _valueUpdated;
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Optional;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +14,7 @@ namespace LibCyStd.Tasks
 #pragma warning disable RCS1090 // Call 'ConfigureAwait(false)'.
                 var completed = await Task.WhenAny(task, delay);
 #pragma warning restore RCS1090 // Call 'ConfigureAwait(false)'.
-                if (completed == delay) ExnUtils.Timeout("The operation has timed out.");
+                if (completed == delay) ExnModule.Timeout("The operation has timed out.");
                 cts.Cancel();
                 await task.ConfigureAwait(false);
             }
@@ -29,7 +28,7 @@ namespace LibCyStd.Tasks
 #pragma warning disable RCS1090 // Call 'ConfigureAwait(false)'.
                 var completed = await Task.WhenAny(task, delay);
 #pragma warning restore RCS1090 // Call 'ConfigureAwait(false)'.
-                if (completed == delay) ExnUtils.Timeout("The operation has timed out.");
+                if (completed == delay) ExnModule.Timeout("The operation has timed out.");
                 cts.Cancel();
                 return await task.ConfigureAwait(false);
             }
@@ -38,7 +37,11 @@ namespace LibCyStd.Tasks
         public static async Task TryCancelled(Func<Task> task, Option<Action> onCancelled)
         {
             try { await task().ConfigureAwait(false); }
-            catch (OperationCanceledException) { onCancelled.MatchSome(action => action()); }
+            catch (OperationCanceledException)
+            {
+                if (onCancelled.IsSome)
+                    onCancelled.Value();
+            }
         }
     }
 }

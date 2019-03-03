@@ -1,4 +1,4 @@
-﻿using Optional;
+﻿using OneOf.Types;
 using System;
 
 namespace LibCyStd.Net
@@ -8,25 +8,25 @@ namespace LibCyStd.Net
         public string Username { get; }
         public string Password { get; }
 
+        public override string ToString() => $"{Username}:{Password}";
+
         public BasicNetworkCredentials(in string username, in string password)
         {
             Username = username;
             Password = password;
         }
 
-        public override string ToString() => $"{Username}:{Password}";
-
         public static Option<BasicNetworkCredentials> TryParse(in string input)
         {
             if (string.IsNullOrWhiteSpace(input))
-                return Option.None<BasicNetworkCredentials>();
+                return None.Value;
 
             var sp = input.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
             if (sp.Length != 2)
-                return Option.None<BasicNetworkCredentials>();
+                return None.Value;
 
             var (username, pw) = (sp[0], sp[1]);
-            return new BasicNetworkCredentials(username, pw).Some();
+            return new BasicNetworkCredentials(username, pw);
         }
     }
 
@@ -41,27 +41,24 @@ namespace LibCyStd.Net
             Credentials = credentials;
         }
 
-        public Proxy(in Uri uri, in BasicNetworkCredentials credentials) : this(uri, credentials.Some())
+        public Proxy(in Uri uri, in BasicNetworkCredentials credentials) : this(uri, new Option<BasicNetworkCredentials>(credentials))
         {
         }
 
-        public Proxy(in Uri uri) : this(uri, Option.None<BasicNetworkCredentials>())
+        public Proxy(in Uri uri) : this(uri, None.Value)
         {
         }
 
         public static Option<Proxy> TryParse(in string input)
         {
-            if (string.IsNullOrWhiteSpace(input))
-                return Option.None<Proxy>();
-
             if (!Uri.TryCreate(input, UriKind.Absolute, out var u)
                 && !Uri.TryCreate($"http://{input}", UriKind.Absolute, out u))
             {
-                return Option.None<Proxy>();
+                return None.Value;
             }
 
             var cred = BasicNetworkCredentials.TryParse(u.UserInfo);
-            return new Proxy(u, cred).Some();
+            return new Proxy(u, cred);
         }
     }
 }
