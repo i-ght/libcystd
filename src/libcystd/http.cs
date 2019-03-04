@@ -4,12 +4,11 @@ using CurlThin.SafeHandles;
 using LibCyStd.Net;
 using LibCyStd.Seq;
 using OneOf.Types;
-//using Optional;
-//using Optional.Unsafe;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -120,9 +119,9 @@ namespace LibCyStd.Http
     }
 
     /// <summary>
-    /// <see cref="Http"/> utility functions.
+    /// <see cref="LibCyStd.Http"/> utility functions.
     /// </summary>
-    public static class HttpModule
+    public static class HttpUtils
     {
         private const string UnreservedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~";
 
@@ -139,7 +138,7 @@ namespace LibCyStd.Http
                 if (UnreservedChars.IndexOf(ch) == -1) sb.Append("%").AppendFormat("{0:X2}", (int)ch);
                 else sb.Append(ch);
             }
-            SeqUtils.Iter(input, Append);
+            input.Iter(Append);
             return sb.ToString();
         }
 
@@ -157,7 +156,7 @@ namespace LibCyStd.Http
         /// <param name="sequence"></param>
         /// <returns></returns>
         public static string UrlEncodeSeq(in IEnumerable<(string key, string value)> sequence) =>
-            string.Join("&", Enumerable.Select(sequence, UrlEncodeKvp));
+            string.Join("&", sequence.Select(UrlEncodeKvp));
 
         public static List<(string, string)> EmptyHeadersList() => new List<(string, string)>();
     }
@@ -320,6 +319,11 @@ namespace LibCyStd.Http
     {
         public ReadOnlyMemoryHttpContent(in ReadOnlyMemory<byte> content)
             : base(content) { }
+
+        public override string ToString()
+        {
+            return Content.ToString();
+        }
     }
 
     public class StringHttpContent : HttpContent
@@ -329,6 +333,11 @@ namespace LibCyStd.Http
 
         public StringHttpContent(in string str)
             : this(ReadOnlyMemoryModule.OfString(str)) { }
+
+        public override string ToString()
+        {
+            return Encoding.UTF8.GetString(Content.AsArray());
+        }
     }
 
     /// <summary>
@@ -340,7 +349,12 @@ namespace LibCyStd.Http
             : base(content) { }
 
         public EncodedFormValuesHttpContent(in IEnumerable<(string, string)> sequence)
-            : this(ReadOnlyMemoryModule.OfString(HttpModule.UrlEncodeSeq(sequence))) { }
+            : this(ReadOnlyMemoryModule.OfString(HttpUtils.UrlEncodeSeq(sequence))) { }
+
+        public override string ToString()
+        {
+            return Encoding.UTF8.GetString(Content.AsArray());
+        }
     }
 
     public static class HttpVersion
@@ -358,11 +372,12 @@ namespace LibCyStd.Http
     /// <summary>
     /// Contains http request information
     /// </summary>
+    [DebuggerDisplay("{HttpMethod,nq} {Uri.ToString(),nq} HTTP/{ProtocolVersion.ToString(),nq}")]
     public class HttpReq
     {
         public string HttpMethod { get; }
         public Uri Uri { get; }
-        public IEnumerable<(string key, string value)> Headers { get; set; }
+        public IEnumerable<(string key, string val)> Headers { get; set; }
         public Option<HttpContent> ContentBody { get; set; }
         public Option<Proxy> Proxy { get; set; }
         public TimeSpan Timeout { get; set; }
@@ -372,16 +387,14 @@ namespace LibCyStd.Http
         public Version ProtocolVersion { get; set; }
         //public int MaxRetries { get; set; }
 
-
         public HttpReq(in string method, in Uri uri)
         {
-
             if (!uri.Scheme.InvariantStartsWith("http"))
                 ExnModule.InvalidArg($"{uri} is not a http/https uri.", nameof(uri));
 
             HttpMethod = method;
             Uri = uri;
-            Headers = ReadOnlyCollectionUtils.OfSeq(new List<(string, string)>());
+            Headers = ReadOnlyCollectionModule.OfSeq(SeqModule.Empty<(string key, string val)>());
             ContentBody = None.Value;
             Proxy = None.Value;
             Timeout = TimeSpan.FromSeconds(30.0);
@@ -405,7 +418,7 @@ namespace LibCyStd.Http
                 ExnModule.InvalidArg($"{uri} is not a http/https uri.", nameof(uri));
             HttpMethod = method;
             Uri = ruri;
-            Headers = ReadOnlyCollectionUtils.OfSeq(new List<(string, string)>());
+            Headers = ReadOnlyCollectionModule.OfSeq(new List<(string, string)>());
             ContentBody = None.Value;
             Proxy = None.Value;
             Timeout = TimeSpan.FromSeconds(30.0);
@@ -415,9 +428,61 @@ namespace LibCyStd.Http
             ProtocolVersion = HttpVersion.Http11;
         }
 
+        private static string Http1ReqToStr(in HttpReq req)
+        {
+            var sb = new StringBuilder(512);
+            sb.Append(req.HttpMethod)
+                .Append(" ")
+                .Append(req.Uri.PathAndQuery)
+                .Append(" HTTP/")
+                .Append(req.ProtocolVersion)
+                .Append("Host: ")
+                .Append(req.Uri.Authority);
+
+            foreach (var (key, val) in req.Headers)
+                sb.Append(key).Append(": ").AppendLine(val);
+
+
+            if (req.Cookies.Any())
+            {
+                var cookz = string.Join("; ", req.Cookies);
+                sb.Append("Cookie: ").AppendLine(cookz);
+            }
+
+            if (req.ContentBody.IsSome)
+            {
+                sb.AppendLine().Append(req.ContentBody.Value.ToString());
+            }
+
+            return sb.ToString();
+        }
+
+        private static string Http2ReqToStr(in HttpReq req)
+        {
+            var sb = new StringBuilder(512);
+            sb.Append(":method: ").AppendLine(req.HttpMethod);
+            sb.Append(":path: ").AppendLine(req.Uri.PathAndQuery);
+            sb.Append(":scheme: ").AppendLine(req.Uri.Scheme);
+            sb.Append(":authority: ").AppendLine(req.Uri.Authority);
+
+            foreach (var (key, val) in req.Headers)
+                sb.Append(key).Append(": ").AppendLine(val);
+
+            if (req.Cookies.Any())
+                sb.Append("cookie: ").AppendLine(string.Join("; ", req.Cookies));
+            
+            if (req.ContentBody.IsSome)
+                sb.AppendLine().Append(req.ContentBody.Value.ToString());
+
+            return sb.ToString();
+        }
+
         public override string ToString()
         {
-            return $"{HttpMethod} {Uri} HTTP/{ProtocolVersion}";
+            if (ProtocolVersion.Major == 2)
+                return Http2ReqToStr(this);
+
+            return Http1ReqToStr(this);
         }
     }
 
@@ -462,9 +527,9 @@ namespace LibCyStd.Http
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"{StatusCode} - {Uri}");
+            sb.Append(StatusCode).Append(" - ").Append(Uri).AppendLine();
             foreach (var kvp in Headers)
-                sb.Append($"{kvp.Key}: {string.Join(", ", kvp.Value)}");
+                sb.Append(kvp.Key).Append(": ").Append(string.Join(", ", kvp.Value));
 
             return sb.ToString();
         }
@@ -473,7 +538,7 @@ namespace LibCyStd.Http
     /// <summary>
     /// <see cref="HttpResp"/> utility functions.
     /// </summary>
-    public static class HttpRespUtils
+    public static class HttpRespModule
     {
         public static bool RespIsExpected(in HttpResp resp, in HttpStatusCode stat, in string chars) =>
             resp.StatusCode == stat && resp.Content.InvariantContains(chars);
@@ -525,10 +590,7 @@ namespace LibCyStd.Http
                 return None.Value;
 
             var statusStr = words[1];
-            if (!Enum.TryParse<HttpStatusCode>(statusStr, out var httpStatCode))
-                return None.Value;
-
-            return new HttpStatusInfo(version, httpStatCode);
+            return !Enum.TryParse<HttpStatusCode>(statusStr, out var httpStatCode) ? (Option<HttpStatusInfo>)None.Value : (Option<HttpStatusInfo>)new HttpStatusInfo(version, httpStatCode);
         }
     }
 
@@ -566,8 +628,8 @@ namespace LibCyStd.Http
 
                 var h2 = new Dictionary<string, ReadOnlyCollection<string>>(h.Count);
                 foreach (var kvp in h)
-                    h2.Add(kvp.Key, ReadOnlyCollectionUtils.OfSeq(kvp.Value));
-                var readonlyD = ReadOnlyDictUtils.OfDict(h2);
+                    h2.Add(kvp.Key, ReadOnlyCollectionModule.OfSeq(kvp.Value));
+                var readonlyD = ReadOnlyDictModule.OfDict(h2);
 
                 return new HttpMsgHeader(info, readonlyD);
             }
@@ -580,7 +642,7 @@ namespace LibCyStd.Http
         }
     }
 
-    public static class HttpClient
+    public static class HttpModule
     {
         private class HttpReqState : IDisposable
         {
@@ -602,8 +664,8 @@ namespace LibCyStd.Http
                 {
                     var tmp = new Dictionary<string, ReadOnlyCollection<string>>(_headers.Count, StringComparer.OrdinalIgnoreCase);
                     foreach (var kvp in _headers)
-                        tmp.Add(kvp.Key, ReadOnlyCollectionUtils.OfSeq(kvp.Value));
-                    return ReadOnlyDictUtils.OfDict(tmp);
+                        tmp.Add(kvp.Key, ReadOnlyCollectionModule.OfSeq(kvp.Value));
+                    return ReadOnlyDictModule.OfDict(tmp);
                 }
             }
 
@@ -648,7 +710,7 @@ namespace LibCyStd.Http
             {
                 var len = size * nmemb;
                 var intLen = (int)len;
-                var buffer = ArrayPool<byte>.Shared.Rent((int)len);
+                var buffer = ArrayPool<byte>.Shared.Rent(intLen);
                 try
                 {
                     var dataSpan = new ReadOnlySpan<byte>(data, intLen);
@@ -670,7 +732,7 @@ namespace LibCyStd.Http
                     if (kvpOpt.IsSome)
                     {
                         var (key, val) = kvpOpt.Value;
-                        if (!Headers.ContainsKey(key))
+                        if (!_headers.ContainsKey(key))
                             _headers.Add(key, new List<string>(1));
                         _headers[key].Add(val);
                     }
@@ -732,7 +794,7 @@ namespace LibCyStd.Http
                 HeaderDataHandler = HandleHeaderLine;
                 ContentDataHandler = HandleContent;
                 HeadersSlist = CreateSList(req);
-                Statuses = ReadOnlyCollectionUtils.OfSeq(_statuses);
+                Statuses = ReadOnlyCollectionModule.OfSeq(_statuses);
                 Tcs = new TaskCompletionSource<HttpResp>();
             }
         }
@@ -748,7 +810,7 @@ namespace LibCyStd.Http
             return Marshal.PtrToStringAnsi(ptr);
         }
 
-        static HttpClient()
+        static HttpModule()
         {
             var initResult = CurlNative.Init();
             if (initResult != CURLcode.OK)
@@ -759,7 +821,7 @@ namespace LibCyStd.Http
             }
             catch (InvalidOperationException e)
             {
-                Environment.FailFast($"failed to create curlmultiagent. {e.GetType().Name} ~ {e.Message}");
+                Environment.FailFast($"failed to create curlmultiagent. {e.GetType().Name} ~ {e.Message}", e);
             }
 
             CACertInfo.Init();
@@ -812,7 +874,7 @@ namespace LibCyStd.Http
                     httpReq
                 );
 
-                var fi = new FileInfo("curl-ca-bundle.crt");
+                var fi = new FileInfo($"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}{Path.DirectorySeparatorChar}.curl{Path.DirectorySeparatorChar}curl-ca-bundle.crt");
                 CheckSetOpt(
                     CurlNative.Easy.SetOpt(ez, CURLoption.CAINFO, fi.FullName),
                     httpReq
@@ -851,16 +913,16 @@ namespace LibCyStd.Http
                     httpReq
                 );
 
-                if (Enumerable.Any(httpReq.Cookies))
+                if (httpReq.Cookies.Any())
                 {
-                    var cookiesStr = string.Join("; ", Enumerable.Select(httpReq.Cookies, SysModule.ToString));
+                    var cookiesStr = string.Join("; ", httpReq.Cookies.Select(SysModule.ToString));
                     CheckSetOpt(
                         CurlNative.Easy.SetOpt(ez, CURLoption.COOKIE, cookiesStr),
                         httpReq
                     );
                 }
 
-                void SetProxy(Proxy proxy)
+                void SetProxy(in Proxy proxy)
                 {
                     CheckSetOpt(
                         CurlNative.Easy.SetOpt(ez, CURLoption.PROXY, proxy.Uri.ToString()),
@@ -906,7 +968,7 @@ namespace LibCyStd.Http
                     );
                 }
 
-                void SetContent(HttpContent content)
+                void SetContent(in HttpContent content)
                 {
                     var bytes = content.Content.AsArray();
                     CheckSetOpt(
@@ -962,7 +1024,7 @@ namespace LibCyStd.Http
                 state.Statuses[state.Statuses.Count - 1].StatusCode,
                 uri,
                 state.Headers,
-                ReadOnlyCollectionUtils.OfSeq(cookz),
+                ReadOnlyCollectionModule.OfSeq(cookz),
                 state.Content
             );
             state.Tcs.SetResult(resp);

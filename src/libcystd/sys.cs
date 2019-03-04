@@ -24,7 +24,7 @@ namespace LibCyStd
             {
                 if (_value.IsT0)
                     return _value.AsT0;
-                throw new InvalidOperationException("no value associated with this option");
+                throw new InvalidOperationException("no value associated with this option.");
             }
         }
 
@@ -33,25 +33,18 @@ namespace LibCyStd
 
         public (bool success, TValue value) TryGetValue()
         {
-            if (_value.IsT0)
-                return (true, _value.AsT0);
-#pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-            return (false, default);
-#pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
+            return _value.IsT0 ? (true, _value.AsT0) : ((bool success, TValue value))(false, default!);
         }
 
         public Option(in TValue value) => _value = value;
-        public Option(in None none) =>_value = none;
+        public Option(in None none) => _value = none;
 
         public void Switch(Action<TValue> f0, Action<None> f1) => _value.Switch(f0, f1);
         public TResult Match<TResult>(Func<TValue, TResult> f0, Func<None, TResult> f1) => _value.Match(f0, f1);
 
         public override bool Equals(object obj)
         {
-            if (!(obj is Option<TValue> opt))
-                return false;
-
-            return Equals(opt);
+            return !(obj is Option<TValue> opt) ? false : Equals(opt);
         }
 
         public override int GetHashCode()
@@ -72,8 +65,10 @@ namespace LibCyStd
                    IsNone == other.IsNone;
         }
 
-        public static Option<TValue> Some(in TValue value) => new Option<TValue>(value);
-        public static Option<TValue> None => new Option<TValue>(None.Value);
+        public override string ToString()
+        {
+            return _value.IsT0 ? $"Some {_value.AsT0}" : "None";
+        }
         public static implicit operator Option<TValue>(in TValue value) => new Option<TValue>(value);
         public static implicit operator Option<TValue>(in None none) => new Option<TValue>(none);
     }
@@ -86,6 +81,8 @@ namespace LibCyStd
         public static bool IsNone<TValue>(Option<TValue> option) => IsNone(in option);
         public static TValue Value<TValue>(in Option<TValue> option) => option.Value;
         public static TValue Value<TValue>(Option<TValue> option) => Value(in option);
+        public static Option<TValue> Some<TValue>(in TValue value) => new Option<TValue>(value);
+        public static Option<TValue> None<TValue>() => new Option<TValue>(OneOf.Types.None.Value);
     }
 
     /// <summary>
@@ -97,7 +94,7 @@ namespace LibCyStd
         public static void Dispose(IDisposable d) => Dispose(in d);
 
         public static void DisposeSeq(in IEnumerable<IDisposable> disposables) =>
-            SeqUtils.Iter(disposables, Dispose);
+            disposables.Iter(Dispose);
     }
 
     public static class SysModule
@@ -111,9 +108,7 @@ namespace LibCyStd
         public static T Id<T>(in T value) => value;
         public static T Id<T>(T value) => Id(in value);
 
-#pragma warning disable CS8602 // Possible dereference of a null reference.
-        public static string ToString<T>(in T obj) => obj.ToString();
-#pragma warning restore CS8602 // Possible dereference of a null reference.
+        public static string ToString<T>(in T obj) => obj!.ToString();
 
         public static string ToString<T>(T obj) => ToString(in obj);
     }
@@ -200,8 +195,8 @@ namespace LibCyStd
             var msg = $"Message: {ex.Message}";
             var stack = $"StAcK TrAcE: {ex.StackTrace}";
 
-            var list = ReadOnlyCollectionUtils.OfSeq(
-                ListUtils.OfSeq(
+            var list = ReadOnlyCollectionModule.OfSeq(
+                ListModule.OfSeq(
                     new[]
                     {
                         src,
@@ -300,7 +295,7 @@ namespace LibCyStd
 
         public static ReadOnlyMemory<byte> OfString(in string s) => Encoding.UTF8.GetBytes(s);
 
-        public static ReadOnlyMemory<T> OfSeq<T>(in IEnumerable<T> seq) => ArrayUtils.OfSeq(seq);
+        public static ReadOnlyMemory<T> OfSeq<T>(in IEnumerable<T> seq) => ArrayModule.OfSeq(seq);
 
         public static (bool success, ArraySegment<T> arrSeg) TryGetArraySegment<T>(this in ReadOnlyMemory<T> memory)
             => MemoryMarshal.TryGetArray(memory, out var segment) ? (true, segment) : (false, segment);
@@ -346,10 +341,7 @@ namespace LibCyStd
                 return None.Value;
 
             var sp = SplitRemoveEmpty(input, delimter);
-            if (sp.Length != 2)
-                return None.Value;
-
-            return (sp[0], sp[1]);
+            return sp.Length != 2 ? (Option<(string key, string val)>)None.Value : (Option<(string key, string val)>)(sp[0], sp[1]);
         }
 
         public static Option<(string key, string val)> TryParseKvp(in string input, in char delimter)
@@ -358,12 +350,9 @@ namespace LibCyStd
                 return None.Value;
 
             var sp = SplitRemoveEmpty(input, delimter);
-            if (sp.Length != 2)
-                return None.Value;
-
-            return (sp[0], sp[1]);
+            return sp.Length != 2 ? (Option<(string key, string val)>)None.Value : (Option<(string key, string val)>)(sp[0], sp[1]);
         }
-        
+
         public static unsafe string OfSpan(in ReadOnlySpan<byte> bytes)
         {
             fixed (byte* b = bytes)
@@ -451,7 +440,7 @@ namespace LibCyStd
         /// <returns></returns>
         public static Option<WebProxy> TryParse(in string input)
         {
-            var sp = StringModule.SplitRemoveEmpty(input, ':');
+            var sp = input.SplitRemoveEmpty(':');
 
             Option<WebProxy> TryParse2(in string _input)
             {
@@ -475,8 +464,7 @@ namespace LibCyStd
             }
 
             if (sp.Length == 2 && StringModule.AllNotEmptyOrWhiteSpace(sp)) return TryParse2(input);
-            else if (sp.Length == 4 && StringModule.AllNotEmptyOrWhiteSpace(sp)) return TryParse4();
-            else return None.Value;
+            else return sp.Length == 4 && StringModule.AllNotEmptyOrWhiteSpace(sp) ? TryParse4() : (Option<WebProxy>)None.Value;
         }
     }
 }

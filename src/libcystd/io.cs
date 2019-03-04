@@ -11,7 +11,7 @@ namespace LibCyStd
     {
         public static async Task WriteAsync(this Stream stream, ReadOnlyMemory<byte> bytes, CancellationToken cancellationToken)
         {
-            var (success, arraySeg) = ReadOnlyMemoryModule.TryGetArraySegment(bytes);
+            var (success, arraySeg) = bytes.TryGetArraySegment();
             if (!success)
                 ExnModule.InvalidOp("failed to get array from memory.");
             await stream.WriteAsync(
@@ -33,7 +33,7 @@ namespace LibCyStd
     {
         public static ReadOnlyMemory<byte> GZipDecompress(in ReadOnlyMemory<byte> input)
         {
-            using (var inputStream = new MemoryStream(ReadOnlyMemoryModule.AsArray(input)))
+            using (var inputStream = new MemoryStream(input.AsArray()))
             using (var gzip = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var outputStream = new MemoryStream())
             {
@@ -47,7 +47,7 @@ namespace LibCyStd
             using (var output = new MemoryStream())
             {
                 using (var gzip = new GZipStream(output, CompressionMode.Compress))
-                    gzip.Write(ReadOnlyMemoryModule.AsArray(input), 0, input.Length);
+                    gzip.Write(input.AsArray(), 0, input.Length);
                 return output.ToArray();
             }
         }

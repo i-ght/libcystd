@@ -10,8 +10,10 @@ namespace LibCyStd.Seq
     /// <summary>
     /// <see cref="IEnumerable{T}"/> utility functions.
     /// </summary>
-    public static class SeqUtils
+    public static class SeqModule
     {
+        public static IEnumerable<T> Empty<T>() => new List<T>(0);
+
         public static int Len<T>(this IEnumerable<T> seq) => seq.Count();
 
         public static T Random<T>(this IEnumerable<T> seq)
@@ -77,7 +79,7 @@ namespace LibCyStd.Seq
     /// <summary>
     /// <see cref="List{T}"/> utility functions.
     /// </summary>
-    public static class ListUtils
+    public static class ListModule
     {
         /// <summary>
         /// Attempts to cast the sequence to <see cref="List{T}"/>. If that fails, creates a new <see cref="List{T}"/>.
@@ -87,27 +89,25 @@ namespace LibCyStd.Seq
         /// <returns></returns>
         public static List<T> OfSeq<T>(in IEnumerable<T> sequence)
         {
-            if (sequence is List<T> list) return list;
-            else return sequence.ToList();
+            return sequence is List<T> list ? list : sequence.ToList();
         }
     }
 
     /// <summary>
     /// <see cref="ReadOnlyCollection{T}"/> utility functions.
     /// </summary>
-    public static class ReadOnlyCollectionUtils
+    public static class ReadOnlyCollectionModule
     {
         public static ReadOnlyCollection<T> OfSeq<T>(in IEnumerable<T> sequence)
         {
-            if (sequence is ReadOnlyCollection<T> r) return r;
-            else return new ReadOnlyCollection<T>(ListUtils.OfSeq(sequence));
+            return sequence is ReadOnlyCollection<T> r ? r : new ReadOnlyCollection<T>(ListModule.OfSeq(sequence));
         }
     }
 
     /// <summary>
     /// <see cref="IDictionary{TKey, TValue}"/> utility functions
     /// </summary>
-    public static class DictUtils
+    public static class DictModule
     {
         /// <summary>
         /// Creates a new <see cref="Dictionary{TKey, TValue}"/> from sequence of <see cref="ValueTuple"/>s
@@ -132,7 +132,7 @@ namespace LibCyStd.Seq
         {
             return OfSeq(sequence, EqualityComparer<TKey>.Default);
         }
-        
+
         public static IEnumerable<(TKey key, TValue value)> ToSeq<TKey, TValue>(this IDictionary<TKey, TValue> dict)
         {
             var lst = new List<(TKey k, TValue v)>(dict.Count);
@@ -141,20 +141,18 @@ namespace LibCyStd.Seq
             return lst;
         }
 
-
         public static Option<TValue> TryGetValue<TKey, TValue>(
             this IDictionary<TKey, TValue> dict,
             in TKey key)
         {
-            if (dict.TryGetValue(key, out var value)) return value;
-            else return None.Value;
+            return dict.TryGetValue(key, out var value) ? (Option<TValue>)value : (Option<TValue>)None.Value;
         }
     }
 
     /// <summary>
     /// <see cref="IReadOnlyDictionary{TKey, TValue}{TKey, TValue}"/> utility functions.
     /// </summary>
-    public static class ReadOnlyDictUtils
+    public static class ReadOnlyDictModule
     {
         /// <summary>
         /// Creates a new <see cref="Dictionary{TKey, TValue}"/> from sequence of <see cref="ValueTuple"/>s
@@ -167,7 +165,7 @@ namespace LibCyStd.Seq
         public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
             in IEnumerable<(TKey, TValue)> sequence,
             in IEqualityComparer<TKey> equalityComparer
-        ) => new ReadOnlyDictionary<TKey, TValue>(DictUtils.OfSeq(sequence, equalityComparer));
+        ) => new ReadOnlyDictionary<TKey, TValue>(DictModule.OfSeq(sequence, equalityComparer));
 
         public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
             in IEnumerable<(TKey, TValue)> sequence
@@ -181,16 +179,14 @@ namespace LibCyStd.Seq
             this IReadOnlyDictionary<TKey, TValue> dict,
             in TKey key)
         {
-            if (dict.TryGetValue(key, out TValue value))
-                return value;
-            return None.Value;
+            return dict.TryGetValue(key, out TValue value) ? (Option<TValue>)value : (Option<TValue>)None.Value;
         }
     }
 
     /// <summary>
     /// <see cref="Queue{T}"/> utility functions
     /// </summary>
-    public static class QueueUtils
+    public static class QueueModule
     {
         public static T DequeueEnqueue<T>(this Queue<T> queue)
         {
@@ -224,7 +220,7 @@ namespace LibCyStd.Seq
     /// <summary>
     /// <see cref="ICollection{T}"/> utility functions.
     /// </summary>
-    public static class CollectionUtils
+    public static class CollectionModule
     {
         public static void Shuffle<T>(this ICollection<T> collection)
         {
@@ -249,7 +245,7 @@ namespace LibCyStd.Seq
     /// <summary>
     /// array[] utility functions.
     /// </summary>
-    public static class ArrayUtils
+    public static class ArrayModule
     {
         /// <summary>
         /// Attempts to cast the sequence to <see cref="T:T[]"/>. If that fails, creates a new<see cref="T:T[]"/>.
@@ -259,8 +255,7 @@ namespace LibCyStd.Seq
         /// <returns></returns>
         public static T[] OfSeq<T>(in IEnumerable<T> sequence)
         {
-            if (sequence is T[] array) return array;
-            else return sequence.ToArray();
+            return sequence is T[] array ? array : sequence.ToArray();
         }
     }
 }

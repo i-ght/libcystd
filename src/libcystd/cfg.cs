@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reactive.Subjects;
+using System.Text;
 
 namespace LibCyStd
 {
@@ -28,21 +29,21 @@ namespace LibCyStd
 
         private FileInfo LoadFileInfo(in string path)
         {
-            var pathTmp = path;
-            if (!pathTmp.InvariantEndsWith(".ini")) pathTmp = $"{path}.ini";
-            if (!File.Exists(pathTmp)) return MakeFile(pathTmp);
-            else return new FileInfo(pathTmp);
+            var sb = new StringBuilder(path);
+            if (!path.InvariantEndsWith(".ini"))
+                sb.Append(".ini");
+            var fileName = sb.ToString();
+            return !File.Exists(fileName) ? MakeFile(fileName) : new FileInfo(fileName);
         }
 
-        private IDictionary<string, string> Parse(in IEnumerable<string> lines)
+        private Dictionary<string, string> Parse(in IEnumerable<string> lines)
         {
             Option<(string key, string val)> ParseLine(string line)
             {
                 var sp = line.Split('=');
-                if (sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp)) return None.Value;
-                else return (sp[0], sp[1]);
+                return sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp) ? (Option<(string key, string val)>)None.Value : (Option<(string key, string val)>)(sp[0], sp[1]);
             }
-            return DictUtils.OfSeq(lines.Choose(ParseLine));
+            return DictModule.OfSeq(lines.Choose(ParseLine));
         }
 
         public void Save()
@@ -56,19 +57,15 @@ namespace LibCyStd
 
         public Option<T> TryGetValue<T>(in string key) where T : IConvertible
         {
-            if (_values.ContainsKey(key))
-            {
-                try { return (T)Convert.ChangeType(_values[key], typeof(T)); }
-                catch (Exception e) when
-                    (e is InvalidCastException
-                    || e is FormatException
-                    || e is OverflowException
-                    || e is ArgumentNullException)
-                {
-                    return None.Value;
-                }
-            }
-            else
+            if (!_values.ContainsKey(key))
+                return None.Value;
+
+            try { return (T)Convert.ChangeType(_values[key], typeof(T)); }
+            catch (Exception e) when
+                (e is InvalidCastException
+                || e is FormatException
+                || e is OverflowException
+                || e is ArgumentNullException)
             {
                 return None.Value;
             }
@@ -109,7 +106,7 @@ namespace LibCyStd
         {
             FileInfo = LoadFileInfo(path);
             _values = Parse(File.ReadAllLines(FileInfo.FullName));
-            Values = ReadOnlyDictUtils.OfDict(_values);
+            Values = ReadOnlyDictModule.OfDict(_values);
             _valuesUpdated = new Subject<IReadOnlyDictionary<string, string>>();
             _valueUpdated = new Subject<(string name, IConvertible value)>();
             ValuesUpdated = _valuesUpdated;

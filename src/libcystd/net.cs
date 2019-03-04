@@ -49,6 +49,11 @@ namespace LibCyStd.Net
         {
         }
 
+        public override string ToString()
+        {
+            return Uri.ToString();
+        }
+
         public static Option<Proxy> TryParse(in string input)
         {
             if (!Uri.TryCreate(input, UriKind.Absolute, out var u)
