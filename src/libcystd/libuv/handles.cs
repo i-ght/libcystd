@@ -252,7 +252,7 @@ namespace LibCyStd.LibUv
     public class UvAsync : UvHandle
     {
 #pragma warning disable IDE0052 // Remove unread private members
-        private readonly libuv.uv_async_cb _cb;
+        private readonly libuv.uv_async_cb _cb; // DO NOT DARE to gc muh function pointer REEEEEEEEEEEEEEEEEEEEEE
 #pragma warning restore IDE0052 // Remove unread private members
 
         public UvAsync(in IntPtr loopPtr, in libuv.uv_async_cb cb)

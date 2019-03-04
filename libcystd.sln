@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28621.142
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1D4416B8-D15E-45C0-94E4-84F4ADAEFB50}"
 EndProject
@@ -9,13 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "libcystd", "src\libcystd\li
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5528799B-99F1-411F-B566-D811F02148DD}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "lib", "lib", "{2DAC4548-F482-421D-9A5D-06C99ACDCFFA}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CurlThin", "..\libcurlsharp\CurlThin\CurlThin.csproj", "{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "libcystd.csharp.tests", "tests\libcystd.csharp.tests\libcystd.csharp.tests.csproj", "{9A67403B-9618-43F3-AC0C-E88159468012}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OneOf", "..\OneOf\OneOf\OneOf.csproj", "{68D6F356-594E-4B25-8438-8929040DEC1C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,18 +33,6 @@ Global
 		{18814D46-2BC9-4168-A76D-DB6FF1B1DF2C}.Release|x64.Build.0 = Release|Any CPU
 		{18814D46-2BC9-4168-A76D-DB6FF1B1DF2C}.Release|x86.ActiveCfg = Release|Any CPU
 		{18814D46-2BC9-4168-A76D-DB6FF1B1DF2C}.Release|x86.Build.0 = Release|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Debug|x64.Build.0 = Debug|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Debug|x86.Build.0 = Debug|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Release|x64.ActiveCfg = Release|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Release|x64.Build.0 = Release|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Release|x86.ActiveCfg = Release|Any CPU
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A}.Release|x86.Build.0 = Release|Any CPU
 		{9A67403B-9618-43F3-AC0C-E88159468012}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9A67403B-9618-43F3-AC0C-E88159468012}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A67403B-9618-43F3-AC0C-E88159468012}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -63,27 +45,13 @@ Global
 		{9A67403B-9618-43F3-AC0C-E88159468012}.Release|x64.Build.0 = Release|Any CPU
 		{9A67403B-9618-43F3-AC0C-E88159468012}.Release|x86.ActiveCfg = Release|Any CPU
 		{9A67403B-9618-43F3-AC0C-E88159468012}.Release|x86.Build.0 = Release|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Debug|x64.Build.0 = Debug|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Debug|x86.Build.0 = Debug|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Release|x64.ActiveCfg = Release|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Release|x64.Build.0 = Release|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Release|x86.ActiveCfg = Release|Any CPU
-		{68D6F356-594E-4B25-8438-8929040DEC1C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{18814D46-2BC9-4168-A76D-DB6FF1B1DF2C} = {1D4416B8-D15E-45C0-94E4-84F4ADAEFB50}
-		{759FF0D9-42B0-43B6-8069-0DA6B4DE0B9A} = {2DAC4548-F482-421D-9A5D-06C99ACDCFFA}
 		{9A67403B-9618-43F3-AC0C-E88159468012} = {5528799B-99F1-411F-B566-D811F02148DD}
-		{68D6F356-594E-4B25-8438-8929040DEC1C} = {2DAC4548-F482-421D-9A5D-06C99ACDCFFA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2FEA67DC-17D7-4349-B016-97EF26113F3F}

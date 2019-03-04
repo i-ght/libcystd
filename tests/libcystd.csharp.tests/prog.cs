@@ -1,4 +1,5 @@
-﻿using LibCyStd.Http;
+﻿//using LibCyStd.Http;
+using LibCyStd.Http;
 using LibCyStd.Net;
 using LibCyStd.Seq;
 using System;
@@ -13,14 +14,15 @@ namespace LibCyStd.CSharp.Tests
     {
         private static async Task MainAsync()
         {
-            while (true)
+            var cnt = 0;
+            while (cnt++ < 5)
             {
                 try
                 {
                     var tasks = new List<Task<HttpResp>>();
                     foreach (var _ in Enumerable.Range(0, 5))
                     {
-                        var req = new HttpReq("GET", "https://nghttp2.org/httpbin/get")
+                        var req = new HttpReq("GET", "https://httpbin.org/get")
                         {
                             Cookies = ListModule.OfSeq(new[] { new Cookie("name", "value", "/", ".", DateTimeOffset.MaxValue, false, false) }),
                             Proxy = Proxy.TryParse("socks5://192.168.2.112:8889"),
@@ -40,6 +42,9 @@ namespace LibCyStd.CSharp.Tests
                 }
                 await Task.Delay(2000).ConfigureAwait(false);
             }
+
+            await Task.Delay(5000).ConfigureAwait(false);
+            HttpModule.Agent.Dispose();
         }
 
         private static void Main()
