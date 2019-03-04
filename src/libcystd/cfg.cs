@@ -1,5 +1,5 @@
-﻿using LibCyStd.Seq;
-using OneOf.Types;
+﻿using LibCyStd.LibOneOf.Types;
+using LibCyStd.Seq;
 using System;
 using System.Collections.Generic;
 using System.IO;

@@ -1,9 +1,7 @@
-﻿using CurlThin;
-using CurlThin.Enums;
-using CurlThin.SafeHandles;
+﻿using LibCyStd.LibCurl;
+using LibCyStd.LibOneOf.Types;
 using LibCyStd.Net;
 using LibCyStd.Seq;
-using OneOf.Types;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -442,7 +440,6 @@ namespace LibCyStd.Http
             foreach (var (key, val) in req.Headers)
                 sb.Append(key).Append(": ").AppendLine(val);
 
-
             if (req.Cookies.Any())
             {
                 var cookz = string.Join("; ", req.Cookies);
@@ -454,7 +451,7 @@ namespace LibCyStd.Http
                 sb.AppendLine().Append(req.ContentBody.Value.ToString());
             }
 
-            return sb.ToString();
+            return sb.AppendLine().ToString();
         }
 
         private static string Http2ReqToStr(in HttpReq req)
@@ -470,11 +467,11 @@ namespace LibCyStd.Http
 
             if (req.Cookies.Any())
                 sb.Append("cookie: ").AppendLine(string.Join("; ", req.Cookies));
-            
+
             if (req.ContentBody.IsSome)
                 sb.AppendLine().Append(req.ContentBody.Value.ToString());
 
-            return sb.ToString();
+            return sb.AppendLine().ToString();
         }
 
         public override string ToString()
@@ -552,7 +549,13 @@ namespace LibCyStd.Http
         }
     }
 
-    internal class HttpStatusInfo
+#if DEBUG
+    public
+#else
+
+    internal 
+#endif 
+        class HttpStatusInfo
     {
         public Version Version { get; }
         public HttpStatusCode StatusCode { get; }
@@ -644,15 +647,20 @@ namespace LibCyStd.Http
 
     public static class HttpModule
     {
-        private class HttpReqState : IDisposable
+#if DEBUG
+        public
+#else
+        private 
+#endif
+            class HttpReqState : IDisposable
         {
             private readonly List<HttpStatusInfo> _statuses;
             private readonly Dictionary<string, List<string>> _headers;
             private Option<MemoryStream> _contentMemeStream;
 
             public HttpReq Req { get; }
-            public CurlNative.Easy.UnsafeDataHandler HeaderDataHandler { get; }
-            public CurlNative.Easy.UnsafeDataHandler ContentDataHandler { get; }
+            public libcurl.unsafe_write_callback HeaderDataHandler { get; }
+            public libcurl.unsafe_write_callback ContentDataHandler { get; }
             public SafeSlistHandle HeadersSlist { get; }
             public ReadOnlyCollection<HttpStatusInfo> Statuses { get; }
             public TaskCompletionSource<HttpResp> Tcs { get; }
@@ -682,9 +690,9 @@ namespace LibCyStd.Http
 
             private static SafeSlistHandle CreateSList(in HttpReq req)
             {
-                var slist = CurlNative.Slist.Append(SafeSlistHandle.Null, "Expect:");
+                var slist = libcurl.curl_slist_append(SafeSlistHandle.Null, "Expect:");
                 foreach (var (key, val) in req.Headers)
-                    slist = CurlNative.Slist.Append(slist, $"{key}: {val}");
+                    slist = libcurl.curl_slist_append(slist, $"{key}: {val}");
                 return slist;
             }
 
@@ -802,17 +810,22 @@ namespace LibCyStd.Http
         private const int HttpVersion11 = 2;
         private const int HttpVersion20 = 4;
 
-        private static readonly CurlMultiAgent<HttpReqState> Agent;
+#if DEBUG
+        public
+#else
+        private 
+#endif
+            static readonly CurlMultiAgent<HttpReqState> Agent;
 
         private static string CurlCodeStrErr(in CURLcode code)
         {
-            var ptr = CurlNative.Easy.StrError(code);
+            var ptr = libcurl.curl_easy_strerror(code);
             return Marshal.PtrToStringAnsi(ptr);
         }
 
         static HttpModule()
         {
-            var initResult = CurlNative.Init();
+            var initResult = libcurl.curl_global_init();
             if (initResult != CURLcode.OK)
                 Environment.FailFast($"curl_global_init returned {initResult} ~ {CurlCodeStrErr(initResult)}");
             try
@@ -854,35 +867,35 @@ namespace LibCyStd.Http
                 //configures curl easy handle. 
                 var httpReq = state.Req;
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.CUSTOMREQUEST, state.Req.HttpMethod),
+                    libcurl.curl_easy_setopt(ez, CURLoption.CUSTOMREQUEST, state.Req.HttpMethod),
                     httpReq
                 );
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.URL, httpReq.Uri.ToString()),
+                    libcurl.curl_easy_setopt(ez, CURLoption.URL, httpReq.Uri.ToString()),
                     httpReq
                 );
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.TIMEOUT_MS, (int)httpReq.Timeout.TotalMilliseconds),
+                    libcurl.curl_easy_setopt(ez, CURLoption.TIMEOUT_MS, (int)httpReq.Timeout.TotalMilliseconds),
                     httpReq
                 );
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.HEADERFUNCTION, state.HeaderDataHandler),
+                    libcurl.curl_easy_setopt(ez, CURLoption.HEADERFUNCTION, state.HeaderDataHandler),
                     httpReq
                 );
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.WRITEFUNCTION, state.ContentDataHandler),
+                    libcurl.curl_easy_setopt(ez, CURLoption.WRITEFUNCTION, state.ContentDataHandler),
                     httpReq
                 );
 
                 var fi = new FileInfo($"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}{Path.DirectorySeparatorChar}.curl{Path.DirectorySeparatorChar}curl-ca-bundle.crt");
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.CAINFO, fi.FullName),
+                    libcurl.curl_easy_setopt(ez, CURLoption.CAINFO, fi.FullName),
                     httpReq
                 );
 
 #if DEBUG
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.SSL_VERIFYPEER, 0),
+                    libcurl.curl_easy_setopt(ez, CURLoption.SSL_VERIFYPEER, 0),
                     httpReq
                 );
 #endif
@@ -898,18 +911,18 @@ namespace LibCyStd.Http
                 {
                     var (_, acceptEncoding) = acceptEncodingOpt.Value;
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.ACCEPT_ENCODING, acceptEncoding),
+                        libcurl.curl_easy_setopt(ez, CURLoption.ACCEPT_ENCODING, acceptEncoding),
                         httpReq
                     );
                 }
 
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.HTTPHEADER, state.HeadersSlist.DangerousGetHandle()),
+                    libcurl.curl_easy_setopt(ez, CURLoption.HTTPHEADER, state.HeadersSlist.DangerousGetHandle()),
                     httpReq
                 );
 
                 CheckSetOpt(
-                    CurlNative.Easy.SetOpt(ez, CURLoption.COOKIEFILE, ""),
+                    libcurl.curl_easy_setopt(ez, CURLoption.COOKIEFILE, ""),
                     httpReq
                 );
 
@@ -917,7 +930,7 @@ namespace LibCyStd.Http
                 {
                     var cookiesStr = string.Join("; ", httpReq.Cookies.Select(SysModule.ToString));
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.COOKIE, cookiesStr),
+                        libcurl.curl_easy_setopt(ez, CURLoption.COOKIE, cookiesStr),
                         httpReq
                     );
                 }
@@ -925,14 +938,14 @@ namespace LibCyStd.Http
                 void SetProxy(in Proxy proxy)
                 {
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.PROXY, proxy.Uri.ToString()),
+                        libcurl.curl_easy_setopt(ez, CURLoption.PROXY, proxy.Uri.ToString()),
                         httpReq
                     );
                     if (proxy.Credentials.IsSome)
                     {
                         var cred = proxy.Credentials.Value;
                         CheckSetOpt(
-                            CurlNative.Easy.SetOpt(ez, CURLoption.PROXYUSERPWD, cred.ToString()),
+                            libcurl.curl_easy_setopt(ez, CURLoption.PROXYUSERPWD, cred.ToString()),
                             httpReq
                         );
                     }
@@ -944,11 +957,11 @@ namespace LibCyStd.Http
                 if (httpReq.AutoRedirect)
                 {
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.FOLLOWLOCATION, 1),
+                        libcurl.curl_easy_setopt(ez, CURLoption.FOLLOWLOCATION, 1),
                         httpReq
                     );
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.MAXREDIRS, 10),
+                        libcurl.curl_easy_setopt(ez, CURLoption.MAXREDIRS, 10),
                         httpReq
                     );
                 }
@@ -956,14 +969,14 @@ namespace LibCyStd.Http
                 if (httpReq.ProtocolVersion.Major == 1)
                 {
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.HTTP_VERSION, HttpVersion11),
+                        libcurl.curl_easy_setopt(ez, CURLoption.HTTP_VERSION, HttpVersion11),
                         httpReq
                     );
                 }
                 else if (httpReq.ProtocolVersion.Major == 2)
                 {
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.HTTP_VERSION, HttpVersion20),
+                        libcurl.curl_easy_setopt(ez, CURLoption.HTTP_VERSION, HttpVersion20),
                         httpReq
                     );
                 }
@@ -972,12 +985,12 @@ namespace LibCyStd.Http
                 {
                     var bytes = content.Content.AsArray();
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.POSTFIELDSIZE, bytes.Length),
+                        libcurl.curl_easy_setopt(ez, CURLoption.POSTFIELDSIZE, bytes.Length),
                         httpReq
                     );
 
                     CheckSetOpt(
-                        CurlNative.Easy.SetOpt(ez, CURLoption.COPYPOSTFIELDS, bytes),
+                        libcurl.curl_easy_setopt(ez, CURLoption.COPYPOSTFIELDS, bytes),
                         httpReq
                     );
                 }
@@ -999,7 +1012,7 @@ namespace LibCyStd.Http
 
             var httpReq = state.Req;
             CheckGetInfo(
-                CurlNative.Easy.GetInfo(ez, CURLINFO.EFFECTIVE_URL, out IntPtr ptr),
+                libcurl.curl_easy_getinfo(ez, CURLINFO.EFFECTIVE_URL, out IntPtr ptr),
                 httpReq
             );
 

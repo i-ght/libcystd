@@ -1,8 +1,6 @@
-﻿using LibCyStd.Seq;
-using OneOf;
-using OneOf.Types;
-//using Optional;
-//using Optional.Unsafe;
+﻿using LibCyStd.LibOneOf;
+using LibCyStd.LibOneOf.Types;
+using LibCyStd.Seq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +14,7 @@ namespace LibCyStd
 {
     public struct Option<TValue> : IEquatable<Option<TValue>>
     {
+        private bool _initialized;
         private readonly OneOf<TValue, None> _value;
 
         public TValue Value
@@ -28,7 +27,7 @@ namespace LibCyStd
             }
         }
 
-        public bool IsSome => _value.IsT0;
+        public bool IsSome => _initialized && _value.IsT0;
         public bool IsNone => _value.IsT1;
 
         public (bool success, TValue value) TryGetValue()
@@ -36,8 +35,17 @@ namespace LibCyStd
             return _value.IsT0 ? (true, _value.AsT0) : ((bool success, TValue value))(false, default!);
         }
 
-        public Option(in TValue value) => _value = value;
-        public Option(in None none) => _value = none;
+        public Option(in TValue value)
+        {
+            _value = value;
+            _initialized = true;
+        }
+
+        public Option(in None none)
+        {
+            _value = none;
+            _initialized = true;
+        }
 
         public void Switch(Action<TValue> f0, Action<None> f1) => _value.Switch(f0, f1);
         public TResult Match<TResult>(Func<TValue, TResult> f0, Func<None, TResult> f1) => _value.Match(f0, f1);
@@ -82,7 +90,7 @@ namespace LibCyStd
         public static TValue Value<TValue>(in Option<TValue> option) => option.Value;
         public static TValue Value<TValue>(Option<TValue> option) => Value(in option);
         public static Option<TValue> Some<TValue>(in TValue value) => new Option<TValue>(value);
-        public static Option<TValue> None<TValue>() => new Option<TValue>(OneOf.Types.None.Value);
+        public static Option<TValue> None<TValue>() => new Option<TValue>(LibOneOf.Types.None.Value);
     }
 
     /// <summary>
@@ -125,6 +133,11 @@ namespace LibCyStd
         public static void InvalidOp(in string message)
         {
             throw new InvalidOperationException(message);
+        }
+
+        public static void ObjDisposed(in string objectName)
+        {
+            throw new ObjectDisposedException(objectName);
         }
 
         /// <summary>
