@@ -7,10 +7,8 @@ namespace LibCyStd
     {
         public static ReadOnlyMemory<byte> CalcMd5(in ReadOnlyMemory<byte> input)
         {
-            using (var md5 = new MD5CryptoServiceProvider())
-            {
-                return md5.ComputeHash(input.AsArray());
-            }
+            using var md5 = new MD5CryptoServiceProvider();
+            return md5.ComputeHash(input.AsArray());
         }
 
         public static string CalcMd5Hex(in ReadOnlyMemory<byte> input)

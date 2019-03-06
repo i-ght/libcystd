@@ -33,23 +33,20 @@ namespace LibCyStd
     {
         public static ReadOnlyMemory<byte> GZipDecompress(in ReadOnlyMemory<byte> input)
         {
-            using (var inputStream = new MemoryStream(input.AsArray()))
-            using (var gzip = new GZipStream(inputStream, CompressionMode.Decompress))
-            using (var outputStream = new MemoryStream())
-            {
-                gzip.CopyTo(outputStream, 8192);
-                return outputStream.ToArray();
-            }
+            using var inputStream = new MemoryStream(input.AsArray());
+            using var gzip = new GZipStream(inputStream, CompressionMode.Decompress);
+            using var outputStream = new MemoryStream();
+            gzip.CopyTo(outputStream, 8192);
+            return outputStream.ToArray();
         }
 
         public static ReadOnlyMemory<byte> GZipCompress(in ReadOnlyMemory<byte> input)
         {
-            using (var output = new MemoryStream())
-            {
-                using (var gzip = new GZipStream(output, CompressionMode.Compress))
-                    gzip.Write(input.AsArray(), 0, input.Length);
-                return output.ToArray();
-            }
+            using var output = new MemoryStream();
+            var gzip = new GZipStream(output, CompressionMode.Compress);
+            try { gzip.Write(input.AsArray(), 0, input.Length); }
+            finally { gzip.Dispose(); }
+            return output.ToArray();
         }
     }
 }

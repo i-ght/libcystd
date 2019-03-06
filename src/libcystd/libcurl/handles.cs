@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 
 namespace LibCyStd.LibCurl
 {
@@ -9,7 +8,7 @@ namespace LibCyStd.LibCurl
         NotAllowed
     }
 
-    public abstract class CurlMemory : IEquatable<CurlMemory>
+    public abstract class CurlMemory : IEquatable<CurlMemory>, IDisposable
     {
         private bool _disposed;
 

@@ -1,11 +1,9 @@
 ﻿//using LibCyStd.Http;
 using LibCyStd.Http;
 using LibCyStd.Net;
-using LibCyStd.Seq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LibCyStd.CSharp.Tests
@@ -15,7 +13,7 @@ namespace LibCyStd.CSharp.Tests
         private static async Task MainAsync()
         {
             var cnt = 0;
-            while (cnt++ < 5000)
+            while (cnt++ < 1)
             {
                 try
                 {
@@ -47,6 +45,7 @@ namespace LibCyStd.CSharp.Tests
 #if DEBUG
             HttpModule.Agent.Dispose();
 #endif
+            Console.ReadLine();
         }
 
         private static void Main()

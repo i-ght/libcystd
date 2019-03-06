@@ -3417,11 +3417,9 @@ aX5LaAzHHjcng6WMxwLkFM1JAbBzs/3GkDpv0mztO+7skb6iQ12LAEpmJURw3kAP+HwV96LOPNde
 E4yBFxgX0b3xdxA61GU5wSesVywlVP+i2k+KYTlerj1KjL0=
 -----END CERTIFICATE-----
 ";
-                using (var fs = File.Create(file))
-                {
-                    using (var sw = new StreamWriter(fs))
-                        sw.Write(tmp);
-                }
+                using var fs = File.Create(file);
+                using var sw = new StreamWriter(fs);
+                sw.Write(tmp);
             }
         }
     }

@@ -100,7 +100,6 @@ namespace LibCyStd.IO
             );
         }
 
-
         private void Write(IEnumerable<string> items) =>
             _writer.Switch(
                 writer => { foreach (var item in items) writer.WriteLine(item); },
@@ -122,14 +121,12 @@ namespace LibCyStd.IO
 
             if (_kind is FileBlacklist f)
             {
-                using (var fs = new FileStream(f.PathToFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite))
-                using (var sr = new StreamReader(fs))
+                using var fs = new FileStream(f.PathToFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite);
+                using var sr = new StreamReader(fs);
+                while (!sr.EndOfStream)
                 {
-                    while (!sr.EndOfStream)
-                    {
-                        var line = await sr.ReadLineAsync().ConfigureAwait(false);
-                        _set.Add(line);
-                    }
+                    var line = await sr.ReadLineAsync().ConfigureAwait(false);
+                    _set.Add(line);
                 }
             }
             else
@@ -155,14 +152,12 @@ namespace LibCyStd.IO
 
             if (_kind is FileBlacklist f)
             {
-                using (var fs = new FileStream(f.PathToFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite))
-                using (var sr = new StreamReader(fs))
+                using var fs = new FileStream(f.PathToFile, FileMode.OpenOrCreate, FileAccess.Read, FileShare.ReadWrite);
+                using var sr = new StreamReader(fs);
+                while (!sr.EndOfStream)
                 {
-                    while (!sr.EndOfStream)
-                    {
-                        var line = sr.ReadLine();
-                        _set.Add(line);
-                    }
+                    var line = sr.ReadLine();
+                    _set.Add(line);
                 }
             }
             else
@@ -279,12 +274,9 @@ namespace LibCyStd.IO
             lock (_set)
             {
                 if (_set.Count == 0) return;
-                using (var sw = new StreamWriter(_pathToFile, true))
-                {
-                    foreach (var item in _set)
-                        sw.WriteLine(item);
-                }
-
+                using var sw = new StreamWriter(_pathToFile, true);
+                foreach (var item in _set)
+                    sw.WriteLine(item);
                 _set.Clear();
             }
         }

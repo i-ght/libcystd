@@ -1055,7 +1055,6 @@ namespace LibCyStd.Http
 
         private static ReqOpCompletedAction HandleResp(CurlEzHandle ez, HttpReqState state, CURLcode result)
         {
-
             var dispose = true;
             try
             {
@@ -1074,7 +1073,7 @@ namespace LibCyStd.Http
                             return ReqOpCompletedAction.ReuseHandleAndRetry;
                         }
                         ParseResp(ez, state);
-                        return ReqOpCompletedAction.ResetHandleAndNext; 
+                        return ReqOpCompletedAction.ResetHandleAndNext;
                     case CURLcode.OPERATION_TIMEDOUT:
                         ExnModule.Timeout(
                             $"timeout error occured after trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."

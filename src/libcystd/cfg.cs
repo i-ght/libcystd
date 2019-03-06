@@ -23,7 +23,7 @@ namespace LibCyStd
 
         private FileInfo MakeFile(in string path)
         {
-            using (_ = File.Create(path)) { }
+            using var _ = File.Create(path);
             return new FileInfo(path);
         }
 
@@ -48,11 +48,9 @@ namespace LibCyStd
 
         public void Save()
         {
-            using (var sw = new StreamWriter(FileInfo.FullName))
-            {
-                foreach (var kvp in _values)
-                    sw.WriteLine($"{kvp.Key}={kvp.Value}");
-            }
+            using var sw = new StreamWriter(FileInfo.FullName);
+            foreach (var kvp in _values)
+                sw.WriteLine($"{kvp.Key}={kvp.Value}");
         }
 
         public Option<T> TryGetValue<T>(in string key) where T : IConvertible

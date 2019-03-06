@@ -1,5 +1,4 @@
-﻿using LibCyStd.LibOneOf.Types;
-using LibCyStd.LibUv;
+﻿using LibCyStd.LibUv;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -88,6 +87,7 @@ namespace LibCyStd.LibCurl
     public class CurlMultiAgent<TReqState> : IDisposable
     {
         private readonly CurlMultiAgentState<TReqState> _state;
+        private readonly ManualResetEventSlim _disposeEvent;
 
         private bool _disposed;
 
@@ -253,7 +253,6 @@ namespace LibCyStd.LibCurl
                     pollStatus = new PollStatus(mask);
                 }
 
-
                 CURLcselect flags = 0;
 
                 if ((pollStatus.Mask & uv_poll_event.UV_READABLE) != 0)
@@ -318,7 +317,7 @@ namespace LibCyStd.LibCurl
             }
         }
 
-        private void Dispose(UvAsync ayySync)
+        private void Dispose(UvAsync _)
         {
             foreach (var ez in _state.EzPool.Values)
             {
@@ -329,8 +328,6 @@ namespace LibCyStd.LibCurl
             }
 
             _state.Timer.Stop();
-            _state.Timer.Dispose();
-            _state.MultiAdd.Dispose();
 
             foreach (var poll in _state.Sockets.Values)
             {
@@ -338,52 +335,51 @@ namespace LibCyStd.LibCurl
                 poll.Dispose();
             }
 
-            ayySync.Dispose();
+            _state.MultiAdd.Dispose();
+            _state.Disposer.Dispose();
+            _disposed = true;
+            _disposeEvent.Set();
         }
 
         private void Activate()
         {
-            using (var waitHandle = new ManualResetEventSlim())
+            using var waitHandle = new ManualResetEventSlim();
+            void StartLoop()
             {
-                void StartLoop()
-                {
-                    using (var loop = new UvLoop())
-                    {
-                        var multiAdd = new UvAsync(loop, AddHandle);
-                        var timer = new UvTimer(loop);
-                        var disposer = new UvAsync(loop, Dispose);
-                        _state.Loop = loop;
-                        _state.Timer = timer;
-                        _state.MultiAdd = multiAdd;
-                        _state.Disposer = disposer;
+                using var loop = new UvLoop();
+                using var timer = new UvTimer(loop);
+                var multiAdd = new UvAsync(loop, AddHandle);
+                var disposer = new UvAsync(loop, Dispose);
+                _state.Loop = loop;
+                _state.Timer = timer;
+                _state.MultiAdd = multiAdd;
+                _state.Disposer = disposer;
 
-                        CheckMultiResult(
-                            libcurl.curl_multi_setopt(_state.MultiHandle, CURLMoption.SOCKETFUNCTION, _state.SocketCallback)
-                        );
-                        CheckMultiResult(
-                            libcurl.curl_multi_setopt(_state.MultiHandle, CURLMoption.TIMERFUNCTION, _state.TimerCallback)
-                        );
+                CheckMultiResult(
+                    libcurl.curl_multi_setopt(_state.MultiHandle, CURLMoption.SOCKETFUNCTION, _state.SocketCallback)
+                );
+                CheckMultiResult(
+                    libcurl.curl_multi_setopt(_state.MultiHandle, CURLMoption.TIMERFUNCTION, _state.TimerCallback)
+                );
 
-                        waitHandle.Set();
-                        UvUtils.ValidateResult("uv_loop_run", libuv.uv_run(loop, uv_run_mode.UV_RUN_DEFAULT));
-                        _state.Loop.Dispose();
-                        _disposed = true;
-                    }
-                }
-
-                new Thread(StartLoop).Start();
-                waitHandle.Wait();
+                waitHandle.Set();
+                UvUtils.ValidateResult("uv_loop_run", libuv.uv_run(loop, uv_run_mode.UV_RUN_DEFAULT));
             }
+
+            new Thread(StartLoop).Start();
+            waitHandle.Wait();
         }
 
         public void Dispose()
         {
             if (_disposed) return;
             _state.Disposer.Send();
+            _disposeEvent.Wait();
         }
 
         public CurlMultiAgent(in int ezPoolSize)
         {
+            _disposeEvent = new ManualResetEventSlim();
             var multiHandle = libcurl.curl_multi_init();
             var activeEzHandles = new ConcurrentDictionary<IntPtr, ReqCtx<TReqState>>();
             var inactiveEzHandles = new ConcurrentQueue<CurlEzHandle>();
