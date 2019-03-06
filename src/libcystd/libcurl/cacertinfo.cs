@@ -7,7 +7,8 @@ namespace LibCyStd.LibCurl
     {
         public static void Init()
         {
-            var dir = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}{Path.DirectorySeparatorChar}.curl";
+            var folderPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var dir = $"{folderPath}{Path.DirectorySeparatorChar}.curl";
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 

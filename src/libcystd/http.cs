@@ -383,15 +383,11 @@ namespace LibCyStd.Http
         public bool AutoRedirect { get; set; }
         public bool ProxyRequired { get; set; }
         public Version ProtocolVersion { get; set; }
-        //public int MaxRetries { get; set; }
+        public bool KeepAlive { get; set; }
+        public int MaxRetries { get; set; }
 
-        public HttpReq(in string method, in Uri uri)
+        private void InitDef()
         {
-            if (!uri.Scheme.InvariantStartsWith("http"))
-                ExnModule.InvalidArg($"{uri} is not a http/https uri.", nameof(uri));
-
-            HttpMethod = method;
-            Uri = uri;
             Headers = ReadOnlyCollectionModule.OfSeq(SeqModule.Empty<(string key, string val)>());
             ContentBody = None.Value;
             Proxy = None.Value;
@@ -400,6 +396,18 @@ namespace LibCyStd.Http
             AutoRedirect = true;
             ProxyRequired = true;
             ProtocolVersion = HttpVersion.Http11;
+            KeepAlive = false;
+        }
+
+#pragma warning disable CS8618 // Non-nullable field is uninitialized.
+        public HttpReq(in string method, in Uri uri)
+        {
+            if (!uri.Scheme.InvariantStartsWith("http"))
+                ExnModule.InvalidArg($"{uri} is not a http/https uri.", nameof(uri));
+
+            HttpMethod = method;
+            Uri = uri;
+            InitDef();
         }
 
 #pragma warning disable RCS1139
@@ -416,15 +424,9 @@ namespace LibCyStd.Http
                 ExnModule.InvalidArg($"{uri} is not a http/https uri.", nameof(uri));
             HttpMethod = method;
             Uri = ruri;
-            Headers = ReadOnlyCollectionModule.OfSeq(new List<(string, string)>());
-            ContentBody = None.Value;
-            Proxy = None.Value;
-            Timeout = TimeSpan.FromSeconds(30.0);
-            Cookies = new HashSet<Cookie>();
-            AutoRedirect = true;
-            ProxyRequired = true;
-            ProtocolVersion = HttpVersion.Http11;
+            InitDef();
         }
+#pragma warning restore CS8618 // Non-nullable field is uninitialized.
 
         private static string Http1ReqToStr(in HttpReq req)
         {
@@ -661,10 +663,10 @@ namespace LibCyStd.Http
             public HttpReq Req { get; }
             public libcurl.unsafe_write_callback HeaderDataHandler { get; }
             public libcurl.unsafe_write_callback ContentDataHandler { get; }
-            public SafeSlistHandle HeadersSlist { get; }
+            public CurlSlist HeadersSlist { get; }
             public ReadOnlyCollection<HttpStatusInfo> Statuses { get; }
             public TaskCompletionSource<HttpResp> Tcs { get; }
-            public int Attempts { get; set; }
+            public int Redirects { get; set; }
 
             public ReadOnlyDictionary<string, ReadOnlyCollection<string>> Headers
             {
@@ -688,9 +690,9 @@ namespace LibCyStd.Http
                 }
             }
 
-            private static SafeSlistHandle CreateSList(in HttpReq req)
+            private static CurlSlist CreateSList(in HttpReq req)
             {
-                var slist = libcurl.curl_slist_append(SafeSlistHandle.Null, "Expect:");
+                var slist = libcurl.curl_slist_append(new CurlSlist(IntPtr.Zero), "Expect:");
                 foreach (var (key, val) in req.Headers)
                     slist = libcurl.curl_slist_append(slist, $"{key}: {val}");
                 return slist;
@@ -860,7 +862,7 @@ namespace LibCyStd.Http
             );
         }
 
-        private static void ConfigureEz(SafeEasyHandle ez, HttpReqState state)
+        private static void ConfigureEz(CurlEzHandle ez, HttpReqState state)
         {
             try
             {
@@ -917,7 +919,7 @@ namespace LibCyStd.Http
                 }
 
                 CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.HTTPHEADER, state.HeadersSlist.DangerousGetHandle()),
+                    libcurl.curl_easy_setopt(ez, CURLoption.HTTPHEADER, state.HeadersSlist),
                     httpReq
                 );
 
@@ -954,17 +956,17 @@ namespace LibCyStd.Http
                 if (httpReq.Proxy.IsSome)
                     SetProxy(httpReq.Proxy.Value);
 
-                if (httpReq.AutoRedirect)
-                {
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.FOLLOWLOCATION, 1),
-                        httpReq
-                    );
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.MAXREDIRS, 10),
-                        httpReq
-                    );
-                }
+                //if (httpReq.AutoRedirect)
+                //{
+                //    CheckSetOpt(
+                //        libcurl.curl_easy_setopt(ez, CURLoption.FOLLOWLOCATION, 1),
+                //        httpReq
+                //    );
+                //    CheckSetOpt(
+                //        libcurl.curl_easy_setopt(ez, CURLoption.MAXREDIRS, 10),
+                //        httpReq
+                //    );
+                //}
 
                 if (httpReq.ProtocolVersion.Major == 1)
                 {
@@ -995,6 +997,14 @@ namespace LibCyStd.Http
                     );
                 }
 
+                if (!httpReq.KeepAlive)
+                {
+                    CheckSetOpt(
+                        libcurl.curl_easy_setopt(ez, CURLoption.FORBID_REUSE, 1),
+                        httpReq
+                    );
+                }
+
                 if (httpReq.ContentBody.IsSome)
                     SetContent(httpReq.ContentBody.Value);
             }
@@ -1005,7 +1015,7 @@ namespace LibCyStd.Http
         }
 
         // parses response from native curl easy handle
-        private static void ParseResp(in SafeEasyHandle ez, in HttpReqState state)
+        private static void ParseResp(in CurlEzHandle ez, in HttpReqState state)
         {
             if (state.Statuses.Count == 0)
                 ExnModule.InvalidOp("malformed http response received. no status info parsed.");
@@ -1043,45 +1053,51 @@ namespace LibCyStd.Http
             state.Tcs.SetResult(resp);
         }
 
-        private static ReqOpCompletedAction HandleResp(SafeEasyHandle ez, HttpReqState state, CURLcode result)
+        private static ReqOpCompletedAction HandleResp(CurlEzHandle ez, HttpReqState state, CURLcode result)
         {
-            using (_ = state)
-            {
-                try
-                {
-                    switch (result)
-                    {
-                        case CURLcode.OK:
-                            ParseResp(ez, state);
-                            break;
-                        case CURLcode.OPERATION_TIMEDOUT:
-                            ExnModule.Timeout(
-                                $"timeout error occured after trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."
-                            );
-                            break;
-                        default:
-                            ExnModule.InvalidOp(
-                                $"Error occured trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."
-                            );
-                            break;
-                    }
-                }
-                catch (Exception e) when (e is InvalidOperationException || e is TimeoutException)
-                {
-                    state.Tcs.SetException(e);
-                }
 
+            var dispose = true;
+            try
+            {
+                switch (result)
+                {
+                    case CURLcode.OK:
+                        if (state.Req.AutoRedirect && (int)state.Statuses.Last().StatusCode / 100 == 3 && state.Redirects++ < 10)
+                        {
+                            CheckGetInfo(libcurl.curl_easy_getinfo(ez, CURLINFO.REDIRECT_URL, out IntPtr urlPtr), state.Req);
+                            if (urlPtr == IntPtr.Zero)
+                                ExnModule.InvalidOp("http server returned redirect status code with no redirect uri.");
+
+                            var redirect = Marshal.PtrToStringAnsi(urlPtr);
+                            CheckSetOpt(libcurl.curl_easy_setopt(ez, CURLoption.URL, redirect), state.Req);
+                            dispose = false;
+                            return ReqOpCompletedAction.ReuseHandleAndRetry;
+                        }
+                        ParseResp(ez, state);
+                        return ReqOpCompletedAction.ResetHandleAndNext; 
+                    case CURLcode.OPERATION_TIMEDOUT:
+                        ExnModule.Timeout(
+                            $"timeout error occured after trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."
+                        );
+                        return ReqOpCompletedAction.ResetHandleAndNext;
+                    default:
+                        ExnModule.InvalidOp(
+                            $"Error occured trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."
+                        );
+                        return ReqOpCompletedAction.ResetHandleAndNext;
+                }
+            }
+            catch (Exception e) when (e is InvalidOperationException || e is TimeoutException)
+            {
+                state.Tcs.SetException(e);
                 return ReqOpCompletedAction.ResetHandleAndNext;
             }
+            finally
+            {
+                if (dispose)
+                    state.Dispose();
+            }
 
-            //if (state.Attempts++ >= state.Req.MaxRetries)
-            //{
-            //    return ReqOpCompletedAction.ReuseHandleAndRetry;
-            //}
-            //else
-            //{
-            //    state.Dispose();
-            //    return ReqOpCompletedAction.ResetHandleAndNext;
             //}
         }
 

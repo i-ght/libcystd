@@ -132,12 +132,13 @@ namespace LibCyStd.LibUv
     }
 
     [Flags]
-    public enum PollMask
+    public enum uv_poll_event
     {
-        None = 0,
-        Readable = 1, // UV_READABLE
-        Writable = 2, // UV_WRITABLE
-        Disconnect = 4  // UV_DISCONNECT
-    };
+        NONE,
+        UV_READABLE = 1,
+        UV_WRITABLE = 2,
+        UV_DISCONNECT = 4,
+        UV_PRIORITIZED = 8
+    }
 #pragma warning restore IDE1006 // Naming Styles
 }

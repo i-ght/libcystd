@@ -63,71 +63,87 @@ namespace LibCyStd.LibCurl
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public unsafe delegate ulong unsafe_write_callback(byte* data, ulong size, ulong nmemb, void* userdata);
 
-        [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern SafeEasyHandle curl_easy_init();
+        [DllImport(LIBCURL, EntryPoint = "curl_easy_init", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr _curl_easy_init();
+
+        public static CurlEzHandle curl_easy_init()
+        {
+            var handle = _curl_easy_init();
+            if (handle == IntPtr.Zero)
+                throw new CurlException("curl_easy_init returned NULL.");
+            return new CurlEzHandle(handle);
+        }
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
         public static extern void curl_easy_cleanup(IntPtr handle);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_perform(SafeEasyHandle handle);
+        public static extern CURLcode curl_easy_perform(IntPtr handle);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void curl_easy_reset(SafeEasyHandle handle);
+        public static extern void curl_easy_reset(IntPtr handle);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_setopt(SafeEasyHandle handle, CURLoption option, int value);
+        public static extern CURLcode curl_easy_setopt(IntPtr handle, CURLoption option, int value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_setopt(SafeEasyHandle handle, CURLoption option, IntPtr value);
+        public static extern CURLcode curl_easy_setopt(IntPtr handle, CURLoption option, IntPtr value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        public static extern CURLcode curl_easy_setopt(SafeEasyHandle handle, CURLoption option, string value);
+        public static extern CURLcode curl_easy_setopt(IntPtr handle, CURLoption option, string value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_setopt(SafeEasyHandle handle, CURLoption option, byte[] value);
+        public static extern CURLcode curl_easy_setopt(IntPtr handle, CURLoption option, byte[] value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_setopt(SafeEasyHandle handle, CURLoption option, write_callback value);
+        public static extern CURLcode curl_easy_setopt(IntPtr handle, CURLoption option, write_callback value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_setopt(SafeEasyHandle handle, CURLoption option, unsafe_write_callback value);
+        public static extern CURLcode curl_easy_setopt(IntPtr handle, CURLoption option, unsafe_write_callback value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_getinfo(SafeEasyHandle handle, CURLINFO option, out int value);
+        public static extern CURLcode curl_easy_getinfo(IntPtr handle, CURLINFO option, out int value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_getinfo(SafeEasyHandle handle, CURLINFO option, out IntPtr value);
+        public static extern CURLcode curl_easy_getinfo(IntPtr handle, CURLINFO option, out IntPtr value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLcode curl_easy_getinfo(SafeEasyHandle handle, CURLINFO option, out double value);
+        public static extern CURLcode curl_easy_getinfo(IntPtr handle, CURLINFO option, out double value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
-        public static extern CURLcode curl_easy_getinfo(SafeEasyHandle handle, CURLINFO option, IntPtr value);
+        public static extern CURLcode curl_easy_getinfo(IntPtr handle, CURLINFO option, IntPtr value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr curl_easy_strerror(CURLcode errornum);
 
-        [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern SafeMultiHandle curl_multi_init();
+        [DllImport(LIBCURL, EntryPoint = "curl_multi_init", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr _curl_multi_init();
+
+        public static CurlMultiHandle curl_multi_init()
+        {
+            var handle = _curl_multi_init();
+            if (handle == IntPtr.Zero)
+                throw new CurlException("curl_multi_init returned NULL.");
+            return new CurlMultiHandle(handle);
+        }
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
         public static extern CURLMcode curl_multi_cleanup(IntPtr multiHandle);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLMcode curl_multi_add_handle(SafeMultiHandle multiHandle, SafeEasyHandle easyHandle);
+        public static extern CURLMcode curl_multi_add_handle(IntPtr multiHandle, IntPtr easyHandle);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLMcode curl_multi_remove_handle(SafeMultiHandle multiHandle, SafeEasyHandle easyHandle);
+        public static extern CURLMcode curl_multi_remove_handle(IntPtr multiHandle, IntPtr easyHandle);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLMcode curl_multi_setopt(SafeMultiHandle multiHandle, CURLMoption option, int value);
+        public static extern CURLMcode curl_multi_setopt(IntPtr multiHandle, CURLMoption option, int value);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr curl_multi_info_read(SafeMultiHandle multiHandle, out int msgsInQueue);
+        public static extern IntPtr curl_multi_info_read(IntPtr multiHandle, out int msgsInQueue);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLMcode curl_multi_socket_action(SafeMultiHandle multiHandle, SafeSocketHandle sockfd,
+        public static extern CURLMcode curl_multi_socket_action(IntPtr multiHandle, IntPtr sockfd,
             CURLcselect evBitmask,
             out int runningHandles);
 
@@ -138,20 +154,29 @@ namespace LibCyStd.LibCurl
         public delegate int timer_callback(IntPtr multiHandle, int timeoutMs, IntPtr userp);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLMcode curl_multi_setopt(SafeMultiHandle multiHandle, CURLMoption option, timer_callback value);
+        public static extern CURLMcode curl_multi_setopt(IntPtr multiHandle, CURLMoption option, timer_callback value);
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         public delegate int socket_callback(IntPtr easy, IntPtr s, CURLpoll what, IntPtr userp, IntPtr socketp);
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern CURLMcode curl_multi_setopt(SafeMultiHandle multiHandle, CURLMoption option,
+        public static extern CURLMcode curl_multi_setopt(IntPtr multiHandle, CURLMoption option,
             socket_callback value);
 
-        [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern SafeSlistHandle curl_slist_append(SafeSlistHandle slist, string data);
+        [DllImport(LIBCURL, EntryPoint = "curl_slist_append", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr _curl_slist_append(IntPtr slist, string data);
+
+        public static CurlSlist curl_slist_append(CurlSlist slist, string data)
+        {
+            var handle = _curl_slist_append(slist, data);
+            if (handle == IntPtr.Zero)
+                throw new CurlException("curl_slist_append returned NULL.");
+            slist.SetHandle(handle);
+            return slist;
+        }
 
         [DllImport(LIBCURL, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void curl_slist_free_all(SafeSlistHandle pList);
+        public static extern void curl_slist_free_all(IntPtr pList);
     }
 #pragma warning restore IDE1006 // Naming Styles
 }

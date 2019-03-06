@@ -13,6 +13,15 @@ namespace LibCyStd.LibUv
 #pragma warning disable RCS1058 // Use compound assignment.
 #pragma warning disable IDE0054 // Use compound assignment
     [StructLayout(LayoutKind.Sequential)]
+    public struct uv_handle_t
+    {
+        public IntPtr data;
+        public IntPtr loop;
+        public uv_handle_type type;
+        public IntPtr close_cb;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public struct SockAddr
     {
         // this type represents native memory occupied by sockaddr struct
@@ -167,17 +176,17 @@ namespace LibCyStd.LibUv
 
     public struct PollStatus
     {
-        public PollMask Mask { get; }
+        public uv_poll_event Mask { get; }
 
         public Option<UvException> Error { get; }
 
-        internal PollStatus(PollMask mask)
+        internal PollStatus(uv_poll_event mask)
         {
             Mask = mask;
             Error = None.Value;
         }
 
-        internal PollStatus(PollMask mask, UvException error)
+        internal PollStatus(uv_poll_event mask, UvException error)
         {
             Mask = mask;
             Error = error;
