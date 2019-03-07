@@ -2,7 +2,7 @@
 
 namespace LibCyStd.LibUv
 {
-    public static class UvUtils
+    public static class UvModule
     {
         public static void UvEx(in string msg) => throw new UvException(msg);
 

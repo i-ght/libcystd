@@ -70,7 +70,7 @@ namespace LibCyStd.LibCurl
         {
             var handle = _curl_easy_init();
             if (handle == IntPtr.Zero)
-                throw new CurlException("curl_easy_init returned NULL.");
+                CurlModule.CurlEx("curl_easy_init returned NULL.");
             return new CurlEzHandle(handle);
         }
 
@@ -123,7 +123,7 @@ namespace LibCyStd.LibCurl
         {
             var handle = _curl_multi_init();
             if (handle == IntPtr.Zero)
-                throw new CurlException("curl_multi_init returned NULL.");
+                CurlModule.CurlEx("curl_multi_init returned NULL.");
             return new CurlMultiHandle(handle);
         }
 
@@ -170,7 +170,7 @@ namespace LibCyStd.LibCurl
         {
             var handle = _curl_slist_append(slist, data);
             if (handle == IntPtr.Zero)
-                throw new CurlException("curl_slist_append returned NULL.");
+                CurlModule.CurlEx("curl_slist_append returned NULL.");
             slist.SetHandle(handle);
             return slist;
         }

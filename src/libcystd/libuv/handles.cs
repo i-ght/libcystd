@@ -113,7 +113,7 @@ namespace LibCyStd.LibUv
         private void InitMem(UvInitializer init)
         {
             var result = InitUvObj(init.Args, init.Init);
-            UvUtils.ValidateResult(init.CFunctionName, result);
+            UvModule.ValidateResult(init.CFunctionName, result);
         }
 
         public bool Equals(UvMemory other) => Handle == other.Handle;
@@ -161,7 +161,7 @@ namespace LibCyStd.LibUv
             if (_disposed) return;
             if (disposing) { }
             libuv.uv_stop(Handle);
-            try { UvUtils.ValidateResult("uv_loop_close", libuv.uv_loop_close(Handle)); }
+            try { UvModule.ValidateResult("uv_loop_close", libuv.uv_loop_close(Handle)); }
             finally { base.Dispose(true); }
             _disposed = true;
         }
@@ -248,10 +248,10 @@ namespace LibCyStd.LibUv
         public void Start(Action<UvTimer> callback, long timeout, long repeat)
         {
             _cb = callback;
-            UvUtils.ValidateResult("uv_timer_start", libuv.uv_timer_start(Handle, Cb, timeout, repeat));
+            UvModule.ValidateResult("uv_timer_start", libuv.uv_timer_start(Handle, Cb, timeout, repeat));
         }
 
-        public void Stop() => UvUtils.ValidateResult("uv_timer_stop", libuv.uv_timer_stop(Handle));
+        public void Stop() => UvModule.ValidateResult("uv_timer_stop", libuv.uv_timer_stop(Handle));
 
         private static void TimerCallback(IntPtr handle)
         {
@@ -276,10 +276,10 @@ namespace LibCyStd.LibUv
         public void Start(uv_poll_event eventMask, Action<UvPoll, int, int> callback)
         {
             _cb = callback;
-            UvUtils.ValidateResult("uv_poll_start", libuv.uv_poll_start(Handle, (int)eventMask, Cb));
+            UvModule.ValidateResult("uv_poll_start", libuv.uv_poll_start(Handle, (int)eventMask, Cb));
         }
 
-        public void Stop() => UvUtils.ValidateResult("uv_poll_stop", libuv.uv_poll_stop(Handle));
+        public void Stop() => UvModule.ValidateResult("uv_poll_stop", libuv.uv_poll_stop(Handle));
 
         private static void PollCallback(IntPtr handle, int status, int events)
         {
@@ -309,6 +309,6 @@ namespace LibCyStd.LibUv
         public UvAsync(in UvLoop loop, in Action<UvAsync> cb) : base(uv_handle_type.UV_ASYNC, loop, new UvInitializer("uv_async_init", new InitAsyncArgs(loop, Cb), (UvInitAsyncFnSig)libuv.uv_async_init))
             => _cb = cb;
 
-        public void Send() => UvUtils.ValidateResult("uv_async_send", libuv.uv_async_send(Handle));
+        public void Send() => UvModule.ValidateResult("uv_async_send", libuv.uv_async_send(Handle));
     }
 }

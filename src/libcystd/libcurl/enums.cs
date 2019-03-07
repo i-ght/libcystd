@@ -3,6 +3,8 @@ using System;
 
 namespace LibCyStd.LibCurl
 {
+#pragma warning disable RCS1157 // Composite enum value contains undefined flag.
+#pragma warning disable RCS1154 // Sort enum members.
     /// <summary>
     ///     Reference: https://github.com/curl/curl/blob/master/include/curl/curl.h
     /// </summary>
@@ -310,6 +312,7 @@ namespace LibCyStd.LibCurl
     [Flags]
     public enum CURLcselect
     {
+        NONE = 0,
         IN = 0x01,
         OUT = 0x02,
         ERR = 0x04
@@ -1524,6 +1527,7 @@ namespace LibCyStd.LibCurl
     [Flags]
     public enum CURLPROTO
     {
+        NONE = 0,
         HTTP = 1 << 0,
         HTTPS = 1 << 1,
         FTP = 1 << 2,
@@ -1553,9 +1557,11 @@ namespace LibCyStd.LibCurl
         SMB = 1 << 26,
         SMBS = 1 << 27,
 
-        /// <summary>
-        ///     Enable everything.
-        /// </summary>
+                               /// <summary>
+                               ///     Enable everything.
+                               /// </summary>
         ALL = ~0
+#pragma warning restore RCS1157 // Composite enum value contains undefined flag.
+#pragma warning restore RCS1154 // Sort enum members.
     }
 }

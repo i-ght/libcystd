@@ -91,29 +91,9 @@ namespace LibCyStd.LibCurl
 
         private bool _disposed;
 
-        private static string CurlEzStrErr(CURLcode code)
+        private void Timeout(UvTimer __)
         {
-            var ptr = libcurl.curl_easy_strerror(code);
-            return Marshal.PtrToStringAnsi(ptr);
-        }
-
-        private static string CurlMultiStrErr(CURLMcode code)
-        {
-            var ptr = libcurl.curl_multi_strerror(code);
-            return Marshal.PtrToStringAnsi(ptr);
-        }
-
-        private static void CheckMultiResult(CURLMcode code)
-        {
-            if (code == CURLMcode.OK)
-                return;
-
-            throw new CurlException($"curl_multi_setopt returned: {code} ~ {CurlMultiStrErr(code)}");
-        }
-
-        private void Timeout()
-        {
-            CheckMultiResult(
+            CurlModule.ValidateMultiResult(
                 libcurl.curl_multi_socket_action(_state.MultiHandle, new IntPtr(-1), 0, out _)
             );
             CheckMultiInfo();
@@ -153,8 +133,9 @@ namespace LibCyStd.LibCurl
             }
             else
             {
-                if (timeoutMs == 0) timeoutMs = 1;
-                _state.Timer.Start(_ => Timeout(), timeoutMs, 0);
+                if (timeoutMs == 0)
+                    timeoutMs = 1;
+                _state.Timer.Start(Timeout, timeoutMs, 0);
             }
             return 0;
         }
@@ -163,7 +144,7 @@ namespace LibCyStd.LibCurl
         {
             var result = libcurl.curl_easy_setopt(easy, CURLoption.COOKIELIST, "ALL");
             if (result != CURLcode.OK)
-                throw new CurlException($"failed to clear curl ez req cookies. curl_easy_setopt returned {result}, {CurlEzStrErr(result)}");
+                throw new CurlException($"failed to clear curl ez req cookies. curl_easy_setopt returned {result} ~ {CurlModule.CurlEzStrErr(result)}");
         }
 
         private void CheckMultiInfo()
@@ -174,25 +155,24 @@ namespace LibCyStd.LibCurl
             {
                 var message = Marshal.PtrToStructure<CURLMsg>(pMessage);
                 if (message.msg != CURLMSG.DONE)
-                    throw new CurlException($"Unexpected curl_multi_info_read result message: {message.msg}.");
+                    CurlModule.CurlEx($"Unexpected curl_multi_info_read result message: {message.msg}.");
 
                 var easy = _state.EzPool[message.easy_handle];
-
                 var reqCtx = _state.ActiveEzHandles[easy];
                 var action = reqCtx.HandleResp(easy, reqCtx.ReqState, message.data.result);
 
                 if (action == ReqOpCompletedAction.ReuseHandleAndRetry)
                 {
-                    CheckMultiResult(
+                    CurlModule.ValidateMultiResult(
                         libcurl.curl_multi_remove_handle(_state.MultiHandle, easy)
                     );
-                    CheckMultiResult(
+                    CurlModule.ValidateMultiResult(
                         libcurl.curl_multi_add_handle(_state.MultiHandle, easy)
                     );
                 }
                 else if (action == ReqOpCompletedAction.ResetHandleAndNext)
                 {
-                    CheckMultiResult(
+                    CurlModule.ValidateMultiResult(
                          libcurl.curl_multi_remove_handle(_state.MultiHandle, easy)
                     );
                     EzClearCookies(easy);
@@ -201,6 +181,10 @@ namespace LibCyStd.LibCurl
                     _state.InactiveEzHandles.Enqueue(easy);
                     if (_state.PendingRequests.TryDequeue(out reqCtx))
                         ExecReq(reqCtx);
+                }
+                else
+                {
+                    ExnModule.InvalidOp($"out of range ReqOpCompletedAction returned {action}");
                 }
             }
         }
@@ -245,7 +229,7 @@ namespace LibCyStd.LibCurl
                 if (status < 0)
                 {
                     var errMsg = Marshal.PtrToStringAnsi(libuv.uv_strerror((uv_err_code)status));
-                    UvUtils.UvEx(errMsg);
+                    UvModule.UvEx(errMsg);
                     pollStatus = new PollStatus(mask);
                 }
                 else
@@ -261,7 +245,7 @@ namespace LibCyStd.LibCurl
                 if ((pollStatus.Mask & uv_poll_event.UV_WRITABLE) != 0)
                     flags |= CURLcselect.OUT;
 
-                CheckMultiResult(
+                CurlModule.ValidateMultiResult(
                     libcurl.curl_multi_socket_action(_state.MultiHandle, sockfd, flags, out var __)
                 );
                 CheckMultiInfo();
@@ -311,7 +295,7 @@ namespace LibCyStd.LibCurl
         {
             while (_state.EzsToAdd.TryDequeue(out var ez))
             {
-                CheckMultiResult(
+                CurlModule.ValidateMultiResult(
                     libcurl.curl_multi_add_handle(_state.MultiHandle, ez)
                 );
             }
@@ -321,13 +305,14 @@ namespace LibCyStd.LibCurl
         {
             foreach (var ez in _state.EzPool.Values)
             {
-                CheckMultiResult(
+                CurlModule.ValidateMultiResult(
                     libcurl.curl_multi_remove_handle(_state.MultiHandle, ez)
                 );
                 ez.Dispose();
             }
 
             _state.Timer.Stop();
+            _state.Timer.Dispose();
 
             foreach (var poll in _state.Sockets.Values)
             {
@@ -338,7 +323,6 @@ namespace LibCyStd.LibCurl
             _state.MultiAdd.Dispose();
             _state.Disposer.Dispose();
             _disposed = true;
-            _disposeEvent.Set();
         }
 
         private void Activate()
@@ -347,7 +331,7 @@ namespace LibCyStd.LibCurl
             void StartLoop()
             {
                 using var loop = new UvLoop();
-                using var timer = new UvTimer(loop);
+                var timer = new UvTimer(loop);
                 var multiAdd = new UvAsync(loop, AddHandle);
                 var disposer = new UvAsync(loop, Dispose);
                 _state.Loop = loop;
@@ -355,15 +339,16 @@ namespace LibCyStd.LibCurl
                 _state.MultiAdd = multiAdd;
                 _state.Disposer = disposer;
 
-                CheckMultiResult(
+                CurlModule.ValidateMultiResult(
                     libcurl.curl_multi_setopt(_state.MultiHandle, CURLMoption.SOCKETFUNCTION, _state.SocketCallback)
                 );
-                CheckMultiResult(
+                CurlModule.ValidateMultiResult(
                     libcurl.curl_multi_setopt(_state.MultiHandle, CURLMoption.TIMERFUNCTION, _state.TimerCallback)
                 );
 
                 waitHandle.Set();
-                UvUtils.ValidateResult("uv_loop_run", libuv.uv_run(loop, uv_run_mode.UV_RUN_DEFAULT));
+                UvModule.ValidateResult("uv_run", libuv.uv_run(loop, uv_run_mode.UV_RUN_DEFAULT));
+                _disposeEvent.Set();
             }
 
             new Thread(StartLoop).Start();

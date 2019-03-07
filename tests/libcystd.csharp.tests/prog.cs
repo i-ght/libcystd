@@ -18,14 +18,15 @@ namespace LibCyStd.CSharp.Tests
                 try
                 {
                     var tasks = new List<Task<HttpResp>>();
-                    foreach (var _ in Enumerable.Range(0, 5))
+                    foreach (var _ in Enumerable.Range(0, 1))
                     {
                         var req = new HttpReq("GET", "https://aol.com/")
                         {
                             //Cookies = ListModule.OfSeq(new[] { new Cookie("name", "value", "/", ".", DateTimeOffset.MaxValue, false, false) }),
                             Proxy = Proxy.TryParse("socks5://192.168.2.112:8889"),
                             ProtocolVersion = HttpVersion.Http2,
-                            KeepAlive = true
+                            KeepAlive = true,
+                            Timeout = TimeSpan.FromMilliseconds(1.0)
                             //ContentBody = new ReadOnlyMemoryHttpContent(Encoding.UTF8.GetBytes("hello=werld"))
                         };
                         tasks.Add(HttpModule.RetrRespAsync(req));
@@ -34,7 +35,7 @@ namespace LibCyStd.CSharp.Tests
                     var responses = await Task.WhenAll(tasks).ConfigureAwait(false);
                     //sConsole.WriteLine("Made 10 requests");
                 }
-                catch (Exception e) when (e is InvalidOperationException || e is TimeoutException)
+                catch (Exception e) when (e is InvalidOperationException)
                 {
                     Console.Error.WriteLine($"{e.GetType().Name} ~ {e.Message}");
                 }

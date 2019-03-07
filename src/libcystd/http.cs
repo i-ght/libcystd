@@ -842,63 +842,36 @@ namespace LibCyStd.Http
             CACertInfo.Init();
         }
 
-        private static void CheckSetOpt(in CURLcode code, in HttpReq req)
-        {
-            if (code == CURLcode.OK)
-                return;
-
-            throw new CurlException(
-                $"curl_easy_setopt returned {code} ~ {CurlCodeStrErr(code)} for req: {req}"
-            );
-        }
-
-        private static void CheckGetInfo(in CURLcode code, in HttpReq req)
-        {
-            if (code == CURLcode.OK)
-                return;
-
-            throw new CurlException(
-                $"curl_easy_getinfo returned {code} ~ {CurlCodeStrErr(code)} for req: {req}"
-            );
-        }
-
         private static void ConfigureEz(CurlEzHandle ez, HttpReqState state)
         {
             try
             {
                 //configures curl easy handle. 
                 var httpReq = state.Req;
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.CUSTOMREQUEST, state.Req.HttpMethod),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.CUSTOMREQUEST, state.Req.HttpMethod)
                 );
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.URL, httpReq.Uri.ToString()),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.URL, httpReq.Uri.ToString())
                 );
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.TIMEOUT_MS, (int)httpReq.Timeout.TotalMilliseconds),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.TIMEOUT_MS, (int)httpReq.Timeout.TotalMilliseconds)
                 );
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.HEADERFUNCTION, state.HeaderDataHandler),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.HEADERFUNCTION, state.HeaderDataHandler)
                 );
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.WRITEFUNCTION, state.ContentDataHandler),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.WRITEFUNCTION, state.ContentDataHandler)
                 );
 
                 var fi = new FileInfo($"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}{Path.DirectorySeparatorChar}.curl{Path.DirectorySeparatorChar}curl-ca-bundle.crt");
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.CAINFO, fi.FullName),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.CAINFO, fi.FullName)
                 );
 
 #if DEBUG
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.SSL_VERIFYPEER, 0),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.SSL_VERIFYPEER, 0)
                 );
 #endif
 
@@ -912,43 +885,37 @@ namespace LibCyStd.Http
                 if (acceptEncodingOpt.IsSome)
                 {
                     var (_, acceptEncoding) = acceptEncodingOpt.Value;
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.ACCEPT_ENCODING, acceptEncoding),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.ACCEPT_ENCODING, acceptEncoding)
                     );
                 }
 
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.HTTPHEADER, state.HeadersSlist),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.HTTPHEADER, state.HeadersSlist)
                 );
 
-                CheckSetOpt(
-                    libcurl.curl_easy_setopt(ez, CURLoption.COOKIEFILE, ""),
-                    httpReq
+                CurlModule.ValidateSetOptResult(
+                    libcurl.curl_easy_setopt(ez, CURLoption.COOKIEFILE, "")
                 );
 
                 if (httpReq.Cookies.Any())
                 {
                     var cookiesStr = string.Join("; ", httpReq.Cookies.Select(SysModule.ToString));
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.COOKIE, cookiesStr),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.COOKIE, cookiesStr)
                     );
                 }
 
                 void SetProxy(in Proxy proxy)
                 {
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.PROXY, proxy.Uri.ToString()),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.PROXY, proxy.Uri.ToString())
                     );
                     if (proxy.Credentials.IsSome)
                     {
                         var cred = proxy.Credentials.Value;
-                        CheckSetOpt(
-                            libcurl.curl_easy_setopt(ez, CURLoption.PROXYUSERPWD, cred.ToString()),
-                            httpReq
+                        CurlModule.ValidateSetOptResult(
+                            libcurl.curl_easy_setopt(ez, CURLoption.PROXYUSERPWD, cred.ToString())
                         );
                     }
                 }
@@ -958,11 +925,11 @@ namespace LibCyStd.Http
 
                 //if (httpReq.AutoRedirect)
                 //{
-                //    CheckSetOpt(
+                //    CurlUtils.CheckSetOpt(
                 //        libcurl.curl_easy_setopt(ez, CURLoption.FOLLOWLOCATION, 1),
                 //        httpReq
                 //    );
-                //    CheckSetOpt(
+                //    CurlUtils.CheckSetOpt(
                 //        libcurl.curl_easy_setopt(ez, CURLoption.MAXREDIRS, 10),
                 //        httpReq
                 //    );
@@ -970,38 +937,33 @@ namespace LibCyStd.Http
 
                 if (httpReq.ProtocolVersion.Major == 1)
                 {
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.HTTP_VERSION, HttpVersion11),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.HTTP_VERSION, HttpVersion11)
                     );
                 }
                 else if (httpReq.ProtocolVersion.Major == 2)
                 {
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.HTTP_VERSION, HttpVersion20),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.HTTP_VERSION, HttpVersion20)
                     );
                 }
 
                 void SetContent(in HttpContent content)
                 {
                     var bytes = content.Content.AsArray();
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.POSTFIELDSIZE, bytes.Length),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.POSTFIELDSIZE, bytes.Length)
                     );
 
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.COPYPOSTFIELDS, bytes),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.COPYPOSTFIELDS, bytes)
                     );
                 }
 
                 if (!httpReq.KeepAlive)
                 {
-                    CheckSetOpt(
-                        libcurl.curl_easy_setopt(ez, CURLoption.FORBID_REUSE, 1),
-                        httpReq
+                    CurlModule.ValidateSetOptResult(
+                        libcurl.curl_easy_setopt(ez, CURLoption.FORBID_REUSE, 1)
                     );
                 }
 
@@ -1018,17 +980,15 @@ namespace LibCyStd.Http
         private static void ParseResp(in CurlEzHandle ez, in HttpReqState state)
         {
             if (state.Statuses.Count == 0)
-                ExnModule.InvalidOp("malformed http response received. no status info parsed.");
+                CurlModule.CurlEx("malformed http response received. no status info parsed.");
 
-            var httpReq = state.Req;
-            CheckGetInfo(
-                libcurl.curl_easy_getinfo(ez, CURLINFO.EFFECTIVE_URL, out IntPtr ptr),
-                httpReq
+            CurlModule.ValidateGetInfoResult(
+                libcurl.curl_easy_getinfo(ez, CURLINFO.EFFECTIVE_URL, out IntPtr ptr)
             );
 
             var uriStr = Marshal.PtrToStringAnsi(ptr);
             if (string.IsNullOrWhiteSpace(uriStr))
-                ExnModule.InvalidOp("failed to get uri from curl easy.");
+                CurlModule.CurlEx("failed to get uri from curl easy.");
             if (!Uri.TryCreate(uriStr, UriKind.Absolute, out var uri))
                 ExnModule.InvalidOp("failed to parse uri from curl easy.");
 
@@ -1063,30 +1023,34 @@ namespace LibCyStd.Http
                     case CURLcode.OK:
                         if (state.Req.AutoRedirect && (int)state.Statuses.Last().StatusCode / 100 == 3 && state.Redirects++ < 10)
                         {
-                            CheckGetInfo(libcurl.curl_easy_getinfo(ez, CURLINFO.REDIRECT_URL, out IntPtr urlPtr), state.Req);
+                            CurlModule.ValidateGetInfoResult(
+                                libcurl.curl_easy_getinfo(ez, CURLINFO.REDIRECT_URL, out IntPtr urlPtr)
+                            );
                             if (urlPtr == IntPtr.Zero)
-                                ExnModule.InvalidOp("http server returned redirect status code with no redirect uri.");
+                                CurlModule.CurlEx("http server returned redirect status code with no redirect uri.");
 
                             var redirect = Marshal.PtrToStringAnsi(urlPtr);
-                            CheckSetOpt(libcurl.curl_easy_setopt(ez, CURLoption.URL, redirect), state.Req);
+                            CurlModule.ValidateSetOptResult(libcurl.curl_easy_setopt(ez, CURLoption.URL, redirect));
                             dispose = false;
                             return ReqOpCompletedAction.ReuseHandleAndRetry;
                         }
                         ParseResp(ez, state);
                         return ReqOpCompletedAction.ResetHandleAndNext;
                     case CURLcode.OPERATION_TIMEDOUT:
-                        ExnModule.Timeout(
-                            $"timeout error occured after trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."
+                        CurlModule.CurlEx2(
+                            $"Timeout error occured after trying to retrieve response for request {state.Req.HttpMethod} {state.Req.Uri} {state.Req.ProtocolVersion}.",
+                            result
                         );
                         return ReqOpCompletedAction.ResetHandleAndNext;
                     default:
-                        ExnModule.InvalidOp(
-                            $"Error occured trying to retrieve response for request {state.Req}. {result} ~ {CurlCodeStrErr(result)}."
+                        CurlModule.CurlEx2(
+                            $"Error occured trying to retrieve response for request {state.Req.HttpMethod} {state.Req.Uri} {state.Req.ProtocolVersion}.",
+                            result
                         );
                         return ReqOpCompletedAction.ResetHandleAndNext;
                 }
             }
-            catch (Exception e) when (e is InvalidOperationException || e is TimeoutException)
+            catch (InvalidOperationException e)
             {
                 state.Tcs.SetException(e);
                 return ReqOpCompletedAction.ResetHandleAndNext;
@@ -1096,8 +1060,6 @@ namespace LibCyStd.Http
                 if (dispose)
                     state.Dispose();
             }
-
-            //}
         }
 
         public static Task<HttpResp> RetrRespAsync(in HttpReq req)
