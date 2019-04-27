@@ -11,12 +11,16 @@ namespace LibCyStd.IO
     /// <summary>
     /// Base class for blacklist kinds
     /// </summary>
-    public abstract class BlacklistKind { }
+    public abstract class BlacklistKind
+    {
+    }
 
     /// <summary>
     /// Use a instance of this class to specify to <see cref="Blacklist"/> that this blacklist should only exist in memory.
     /// </summary>
-    public class MemoryBlacklist : BlacklistKind { }
+    public class MemoryBlacklist : BlacklistKind
+    {
+    }
 
     /// <summary>
     /// Use a instance of this class to specify to <see cref="Blacklist"/> that this blacklist should load <see cref="FileBlacklist.PathToFile"/> from file and write any additional items added to it.
@@ -60,8 +64,8 @@ namespace LibCyStd.IO
             }
             else
             {
-                _writer = None.Value;
-                _fileStream = None.Value;
+                _writer = Option.None;
+                _fileStream = Option.None;
                 _loaded = true;
             }
 
@@ -168,6 +172,13 @@ namespace LibCyStd.IO
             _loaded = true;
         }
 
+        public void Add(in string item)
+        {
+            Check();
+            if (_set.Add(item)) Write(item);
+        }
+
+
         /// <summary>
         /// Adds item to <see cref="Blacklist"/> using lock.
         /// </summary>
@@ -262,7 +273,7 @@ namespace LibCyStd.IO
                     if (_set.Count > 1000) WriteSet();
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { return; }
             finally { WriteSet(); }
         }
 

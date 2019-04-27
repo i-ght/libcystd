@@ -2,19 +2,29 @@
 using LibCyStd.LibOneOf.Types;
 using LibCyStd.Seq;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reactive.Linq;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace LibCyStd
 {
+    public struct Unit
+    {
+        public static Unit Value { get; }
+        static Unit() => Value = new Unit();
+    }
+
     public struct Option<TValue> : IEquatable<Option<TValue>>
     {
-        private bool _initialized;
+        private readonly bool _initialized;
         private readonly OneOf<TValue, None> _value;
 
         public TValue Value
@@ -22,7 +32,7 @@ namespace LibCyStd
             get
             {
                 if (_value.IsT0)
-                    return _value.AsT0;
+                    return _value.T0Value;
                 throw new InvalidOperationException("no value associated with this option.");
             }
         }
@@ -30,10 +40,7 @@ namespace LibCyStd
         public bool IsSome => _initialized && _value.IsT0;
         public bool IsNone => _value.IsT1;
 
-        public (bool success, TValue value) TryGetValue()
-        {
-            return _value.IsT0 ? (true, _value.AsT0) : ((bool success, TValue value))(false, default!);
-        }
+        public (bool success, TValue value) TryGetValue() => _value.IsT0 ? (true, _value.T0Value) : ((bool success, TValue value))(false, default!);
 
         public Option(in TValue value)
         {
@@ -47,6 +54,19 @@ namespace LibCyStd
             _initialized = true;
         }
 
+        public void Deconstruct(out bool isSome)
+        {
+            isSome = IsSome;
+        }
+
+        public void Deconstruct(out bool isSome, out TValue value)
+        {
+#pragma warning disable CS8601 // Possible null reference assignment. It's ok to be null in this function. Caller is responsible for checking if it's safe to access value by seeing if isSome is true.
+            value = IsSome ? _value.T0Value : default;
+#pragma warning restore CS8601 // Possible null reference assignment.
+            isSome = IsSome;
+        }
+
         public void Switch(Action<TValue> f0, Action<None> f1) => _value.Switch(f0, f1);
         public TResult Match<TResult>(Func<TValue, TResult> f0, Func<None, TResult> f1) => _value.Match(f0, f1);
 
@@ -58,30 +78,30 @@ namespace LibCyStd
         public override int GetHashCode()
         {
             var hashCode = 2067055381;
-            hashCode = hashCode * -1521134295 + EqualityComparer<OneOf<TValue, None>>.Default.GetHashCode(_value);
-            hashCode = hashCode * -1521134295 + EqualityComparer<TValue>.Default.GetHashCode(Value);
-            hashCode = hashCode * -1521134295 + IsSome.GetHashCode();
-            hashCode = hashCode * -1521134295 + IsNone.GetHashCode();
-            return hashCode;
+            hashCode = (hashCode * -1521134295) + EqualityComparer<OneOf<TValue, None>>.Default.GetHashCode(_value);
+            hashCode = (hashCode * -1521134295) + EqualityComparer<TValue>.Default.GetHashCode(Value);
+            hashCode = (hashCode * -1521134295) + IsSome.GetHashCode();
+            return (hashCode * -1521134295) + IsNone.GetHashCode();
         }
 
         public bool Equals(Option<TValue> other)
         {
-            return EqualityComparer<OneOf<TValue, None>>.Default.Equals(_value, other._value) &&
-                   EqualityComparer<TValue>.Default.Equals(Value, other.Value) &&
-                   IsSome == other.IsSome &&
-                   IsNone == other.IsNone;
+            return EqualityComparer<OneOf<TValue, None>>.Default.Equals(_value, other._value)
+                   && EqualityComparer<TValue>.Default.Equals(Value, other.Value)
+                   && IsSome == other.IsSome
+                   && IsNone == other.IsNone;
         }
 
         public override string ToString()
         {
-            return _value.IsT0 ? $"Some {_value.AsT0}" : "None";
+            return _value.IsT0 ? $"Some {_value.T0Value}" : "None";
         }
+
         public static implicit operator Option<TValue>(in TValue value) => new Option<TValue>(value);
         public static implicit operator Option<TValue>(in None none) => new Option<TValue>(none);
     }
 
-    public static class OptionModule
+    public static class Option
     {
         public static bool IsSome<TValue>(in Option<TValue> option) => option.IsSome;
         public static bool IsSome<TValue>(Option<TValue> option) => IsSome(in option);
@@ -90,7 +110,11 @@ namespace LibCyStd
         public static TValue Value<TValue>(in Option<TValue> option) => option.Value;
         public static TValue Value<TValue>(Option<TValue> option) => Value(in option);
         public static Option<TValue> Some<TValue>(in TValue value) => new Option<TValue>(value);
-        public static Option<TValue> None<TValue>() => new Option<TValue>(LibOneOf.Types.None.Value);
+
+        public static None None { get; }
+        public static Option<TValue> CreateNone<TValue>() => new Option<TValue>(None);
+
+        static Option() => None = None.Value;
     }
 
     /// <summary>
@@ -107,6 +131,32 @@ namespace LibCyStd
 
     public static class SysModule
     {
+        public static void TryThrow(Action fn, Action onErr)
+        {
+            try
+            {
+                fn();
+            }
+            catch
+            {
+                onErr();
+                throw;
+            }
+        }
+
+        public static async Task TryAsync(Func<Task> fn, Action onErr)
+        {
+            try
+            {
+                await fn().ConfigureAwait(false);
+            }
+            catch
+            {
+                onErr();
+                throw;
+            }
+        }
+
         /// <summary>
         /// Identity function
         /// </summary>
@@ -130,12 +180,17 @@ namespace LibCyStd
         /// throws a new <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <param name="message"></param>
-        public static void InvalidOp(in string message)
+        public static Unit InvalidOp(in string message)
         {
             throw new InvalidOperationException(message);
         }
 
-        public static void ObjDisposed(in string objectName)
+        public static Unit ObjDisposed(in object o)
+        {
+            throw new ObjectDisposedException(o.GetType().Name);
+        }
+
+        public static Unit ObjDisposed(in string objectName)
         {
             throw new ObjectDisposedException(objectName);
         }
@@ -145,7 +200,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="inner"></param>
-        public static void InvalidOp(in string message, in Exception inner)
+        public static Unit InvalidOp(in string message, in Exception inner)
         {
             throw new InvalidOperationException(message, inner);
         }
@@ -155,7 +210,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="paramName"></param>
-        public static void InvalidArg(in string message, in string paramName)
+        public static Unit InvalidArg(in string message, in string paramName)
         {
             throw new ArgumentException(message, paramName);
         }
@@ -164,7 +219,7 @@ namespace LibCyStd
         /// throws a new <see cref="ArgumentNullException"/>.
         /// </summary>
         /// <param name="paramName"></param>
-        public static void NullArg(in string paramName)
+        public static Unit NullArg(in string paramName)
         {
             throw new ArgumentNullException(paramName);
         }
@@ -173,7 +228,7 @@ namespace LibCyStd
         /// Throws a new <see cref="TimeoutException"/>.
         /// </summary>
         /// <param name="message"></param>
-        public static void Timeout(in string message)
+        public static Unit Timeout(in string message)
         {
             throw new TimeoutException(message);
         }
@@ -183,7 +238,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="inner"></param>
-        public static void Timeout(in string message, in Exception inner)
+        public static Unit Timeout(in string message, in Exception inner)
         {
             throw new TimeoutException(message, inner);
         }
@@ -192,7 +247,11 @@ namespace LibCyStd
         /// Reraises <see cref="Exception"/> with stack trace intact.
         /// </summary>
         /// <param name="e"></param>
-        public static void Reraise(in Exception e) => ExceptionDispatchInfo.Capture(e).Throw();
+        public static Unit Reraise(in Exception e)
+        {
+            ExceptionDispatchInfo.Capture(e).Throw();
+            return Unit.Value;
+        }
 
         /// <summary>
         /// Transforms <see cref="Exception"/> into log message.
@@ -209,17 +268,15 @@ namespace LibCyStd
             var stack = $"StAcK TrAcE: {ex.StackTrace}";
 
             var list = ReadOnlyCollectionModule.OfSeq(
-                ListModule.OfSeq(
-                    new[]
-                    {
-                        src,
-                        @type,
-                        date,
-                        time,
-                        msg,
-                        stack
-                    }
-                )
+                new[]
+                {
+                    src,
+                    @type,
+                    date,
+                    time,
+                    msg,
+                    stack
+                }
             );
 
             return string.Join(Environment.NewLine, list);
@@ -227,7 +284,9 @@ namespace LibCyStd
 
         public static void NotImpl()
         {
+#pragma warning disable RCS1079 // Throwing of new NotImplementedException.
             throw new NotImplementedException();
+#pragma warning restore RCS1079 // Throwing of new NotImplementedException.
         }
     }
 
@@ -237,20 +296,43 @@ namespace LibCyStd
     public static class RandomModule
     {
         private static readonly Random Rand;
+        private static readonly RNGCryptoServiceProvider Rng;
 
         static RandomModule()
         {
             Rand = new Random();
+            Rng = new RNGCryptoServiceProvider();
+        }
+
+        public static int CryptoNext(in int min, in int max)
+        {
+            using var memOwner = MemoryPool<byte>.Shared.Rent(4);
+            ReadOnlyMemory<byte> mem = memOwner.Memory;
+            var buffer = mem.AsArraySeg().Array;
+            lock (Rng)
+                Rng.GetBytes(buffer);
+            var scale = BitConverter.ToUInt32(buffer, 0);
+            return (int)(min + ((max - min) * (scale / (uint.MaxValue + 1.0))));
         }
 
         public static int Next(in int min, in int max)
         {
-            lock (Rand) return Rand.Next(min, max);
+            lock (Rand)
+                return Rand.Next(min, max);
         }
 
         public static int Next(in int max)
         {
-            lock (Rand) return Rand.Next(max);
+            lock (Rand)
+                return Rand.Next(max);
+        }
+
+        public static Span<byte> NextBytes(in int len)
+        {
+            var bytes = new byte[len];
+            lock (Rand)
+                Rand.NextBytes(bytes);
+            return bytes;
         }
     }
 
@@ -284,17 +366,187 @@ namespace LibCyStd
             => TimeZoneInfo.ConvertTime(dt, tzInfo);
     }
 
-    public static class ReadOnlyMemoryModule
+    public static class ReadOnlySpanModule
     {
-        public static string ToHex(this in ReadOnlyMemory<byte> bytes)
+        public static ReadOnlySpan<byte> OfString(in string s) => Encoding.UTF8.GetBytes(s);
+
+        public static ReadOnlySpan<T> OfSeq<T>(in IEnumerable<T> seq) => ArrayModule.OfSeq(seq);
+
+        public static string ToHex(this in ReadOnlySpan<byte> bytes)
         {
             if (bytes.IsEmpty)
                 return "";
             var sb = new StringBuilder(bytes.Length * 2);
-            foreach (var b in bytes.Span)
+            foreach (var b in bytes)
                 sb.Append(b.ToString("x2"));
             return sb.ToString();
         }
+    }
+
+    public static class SpanModule
+    {
+        public static string ToHex(this in Span<byte> bytes) => ReadOnlySpanModule.ToHex(bytes);
+    }
+
+    public static class MemoryOwnerModule
+    {
+        public static IMemoryOwner<byte> OfString(in string s)
+        {
+            var buffer = MemoryPool<byte>.Shared.Rent(s.Length);
+            Span<byte> bytes = Encoding.UTF8.GetBytes(s);
+            bytes.CopyTo(buffer.Memory.Span);
+            return buffer;
+        }
+    }
+
+    public static class ReadOnlyMemoryModule
+    {
+        public static string HexDump(this in ReadOnlyMemory<byte> mem)
+        {
+            if (mem.IsEmpty)
+                return "";
+
+            const int startOffset = 0;
+            var length = mem.Length;
+            const bool showHeader = true;
+
+            const string columnPadding = "  ";
+            const int leftColumnWidth = 8;
+            const string hexLegend = " 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F";
+            const string asciiLegend = "0123456789ABCDEF";
+
+            const string resetColor = "", offsetColor = "", dataColor = "", newlineColor = "";
+            var result = new List<string>();
+
+            if (showHeader)
+            {
+                result.AddRange(new[]
+                {
+                    "        ",
+                    columnPadding,
+                    hexLegend,
+                    columnPadding,
+                    asciiLegend,
+                    "\r\n"
+                });
+            }
+
+            var offset = startOffset;
+            for (var bufferOffset = 0; bufferOffset < length; bufferOffset += 16)
+            {
+                if (bufferOffset != 0) result.Add("\r\n");
+
+                result.AddRange(new[]
+                {
+                    offsetColor,
+                    Convert.ToString(offset, 16).PadLeft(leftColumnWidth, '0'),
+                    resetColor,
+                    columnPadding
+                });
+
+                var asciiChars = new List<string>();
+                var lineSize = Math.Min(length - offset, 16);
+
+                for (var lineOffset = 0; lineOffset != lineSize; lineOffset++)
+                {
+                    var value = mem.Span[offset++];
+
+                    var isNewline = value == 10;
+
+                    var hexPair = Convert.ToString(value, 16).PadLeft(2, '0');
+                    if (lineOffset != 0) result.Add(" ");
+
+                    result.AddRange(new[]
+                    {
+                        isNewline ? newlineColor : dataColor,
+                        hexPair,
+                        resetColor
+                    });
+
+                    asciiChars.AddRange(new[]
+                    {
+                        isNewline ? newlineColor : dataColor,
+                        value >= 32 && value <= 126
+                            ? ((char)value).ToString()
+                            : ".",
+                        resetColor
+                    });
+                }
+
+                for (var lineOffset = lineSize; lineOffset != 16; lineOffset++)
+                {
+                    result.Add("   ");
+                    asciiChars.Add(" ");
+                }
+
+                result.Add(columnPadding);
+                result.AddRange(asciiChars);
+                //Array.prototype.push.apply(result, asciiChars);
+            }
+
+            var trailingSpaceCount = 0;
+            for (
+                var tailOffset = result.Count - 1;
+                tailOffset >= 0 && result[tailOffset] == " ";
+                tailOffset--
+            )
+            {
+                trailingSpaceCount++;
+            }
+
+            return string.Concat(result.Take(result.Count - trailingSpaceCount)) + $"{Environment.NewLine}len: {mem.Length}";
+
+            //const string colPadding = "  ";
+            //const int leftColWidth = 8;
+            //const string hexLegend = " 0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F";
+            //const string asciiLegend = "0123456789ABCDEF";
+
+            //var result = new List<string>();
+            //result.Add("        ");
+            //result.Add(colPadding);
+            //result.Add(hexLegend);
+            //result.Add(colPadding);
+            //result.Add(asciiLegend);
+            //result.Add(Environment.NewLine);
+
+            //var offset = 0;
+            //for (var bufferOffset = 0; bufferOffset < mem.Length; bufferOffset += 16)
+            //{
+            //    if (bufferOffset != 0)
+            //        result.Add(Environment.NewLine);
+            //    result.Add(Convert.ToString(offset, 16).PadLeft(leftColWidth, '0'));
+
+            //    var asciiChars = new List<string>();
+            //    var lineSize = Math.Min(mem.Length - offset, 16);
+            //    for (var lineOffset = 0; lineOffset != lineSize; lineOffset++)
+            //    {
+            //        var value = mem.Span[offset++];
+            //        if (lineOffset != 0)
+            //            result.Add(" ");
+            //        var hexPair = Convert.ToString(value, 16).PadLeft(2, '0');
+            //        result.Add(hexPair);
+
+            //        asciiChars.Add(value >= 32 && value <= 126 ? Encoding.UTF8.GetString(new byte[1] { value }) : ".");
+            //    }
+
+            //    for (var lineOffset = lineSize; lineOffset != 16; lineOffset++)
+            //    {
+            //        result.Add("   ");
+            //        asciiChars.Add(" ");
+            //    }
+
+            //    result.AddRange(asciiChars);
+            //}
+            //var trailingSpaceCnt = 0;
+            //for (var taillOfset = result.Count - 1; taillOfset >= 0 && result[taillOfset] == " "; taillOfset--)
+            //{
+            //    trailingSpaceCnt++;
+            //}
+
+            //return string.Join("", result.Take(result.Count - trailingSpaceCnt));
+        }
+
+        public static string ToHex(this in ReadOnlyMemory<byte> bytes) => bytes.Span.ToHex();
 
         public static ReadOnlyMemory<byte> OfHex(in string hex)
         {
@@ -321,17 +573,22 @@ namespace LibCyStd
             return seg;
         }
 
-        public static T[] AsArray<T>(this in ReadOnlyMemory<T> memory)
-        {
-            var seg = AsArraySeg(memory);
-            return seg.Array;
-        }
-
         public static string ToBase64EncodedString(this in ReadOnlyMemory<byte> bytes)
-            => Convert.ToBase64String(AsArray(bytes));
+        {
+            var arraySeg = bytes.AsArraySeg();
+            return Convert.ToBase64String(arraySeg.Array, arraySeg.Offset, arraySeg.Count);
+        }
 
         public static ReadOnlyMemory<byte> OfBase64EncodedString(in string input)
             => Convert.FromBase64String(input);
+    }
+
+    public enum Chars
+    {
+        Digits,
+        Letters,
+        DigitsAndLetters,
+        DigitsLettersAndDashUnderscore
     }
 
     /// <summary>
@@ -339,6 +596,24 @@ namespace LibCyStd
     /// </summary>
     public static class StringModule
     {
+        public static string Rando(Chars chars, int len)
+        {
+            var c = chars switch
+            {
+                Chars.Digits => "0123456789",
+                Chars.Letters => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                Chars.DigitsAndLetters => "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                Chars.DigitsLettersAndDashUnderscore => "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_",
+                _ => throw new ArgumentOutOfRangeException(nameof(chars))
+            };
+
+            var sb = new StringBuilder(len);
+            for (var i = 0; i < len; i++)
+                sb.Append(c.Random());
+            
+            return sb.ToString();
+        }
+
         public static string[] SplitRemoveEmpty(this string input, in char delimter)
             => input.Split(new[] { delimter }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -351,19 +626,19 @@ namespace LibCyStd
         public static Option<(string key, string val)> TryParseKvp(in string input, in string delimter)
         {
             if (string.IsNullOrWhiteSpace(input))
-                return None.Value;
+                return Option.None;
 
             var sp = SplitRemoveEmpty(input, delimter);
-            return sp.Length != 2 ? (Option<(string key, string val)>)None.Value : (Option<(string key, string val)>)(sp[0], sp[1]);
+            return sp.Length != 2 ? (Option<(string key, string val)>)Option.None : (Option<(string key, string val)>)(sp[0], sp[1]);
         }
 
         public static Option<(string key, string val)> TryParseKvp(in string input, in char delimter)
         {
             if (string.IsNullOrWhiteSpace(input))
-                return None.Value;
+                return Option.None;
 
             var sp = SplitRemoveEmpty(input, delimter);
-            return sp.Length != 2 ? (Option<(string key, string val)>)None.Value : (Option<(string key, string val)>)(sp[0], sp[1]);
+            return sp.Length != 2 ? (Option<(string key, string val)>)Option.None : (Option<(string key, string val)>)(sp[0], sp[1]);
         }
 
         public static unsafe string OfSpan(in ReadOnlySpan<byte> bytes)
@@ -374,8 +649,7 @@ namespace LibCyStd
             }
         }
 
-        public static unsafe string OfMemory(in ReadOnlyMemory<byte> bytes)
-            => OfSpan(bytes.Span);
+        public static string OfMemory(in ReadOnlyMemory<byte> bytes) => OfSpan(bytes.Span);
 
         public static bool InvariantEquals(this string str1, in string str2) =>
             string.Equals(str1, str2, StringComparison.OrdinalIgnoreCase);
@@ -396,51 +670,6 @@ namespace LibCyStd
             strings.Any(string.IsNullOrWhiteSpace);
     }
 
-    ///// <summary>
-    ///// <see cref="Option"/> utility functions.
-    ///// </summary>
-    //public static class OptionUtils
-    //{
-    //    public static bool HasValue<T>(this in Option<T> opt) => opt.HasValue;
-    //    public static bool HasValue<T>(this Option<T> opt) => HasValue(in opt);
-
-    //    public static T Value<T>(this in Option<T> opt) => opt.ValueOrFailure();
-    //    public static T Value<T>(this Option<T> opt) => Value(in opt);
-
-    //    public static Task MatchSomeAsync<T>(this in Option<T> option, in Func<T, Task> action)
-    //    {
-    //        if (option.HasValue) return action(option.ValueOrFailure());
-    //        else return Task.CompletedTask;
-    //    }
-
-    //    public static Task MatchAsync<T>(this in Option<T> option, in Func<T, Task> some, in Func<Task> none)
-    //    {
-    //        if (option.HasValue) return some(option.ValueOrFailure());
-    //        else return none();
-    //    }
-
-    //    public static Task MatchAsync<T>(this in Option<T> option, in Func<T, Task> some, in Action none)
-    //    {
-    //        if (option.HasValue)
-    //        {
-    //            return some(option.ValueOrFailure());
-    //        }
-    //        else
-    //        {
-    //            none();
-    //            return Task.CompletedTask;
-    //        }
-    //    }
-
-    //    public static Task<TResult> MatchAsync<TResult, T>(this in Option<T> option, in Func<T, Task<TResult>> someAction, Func<Task<TResult>> noneAction)
-    //    {
-    //        return
-    //            option.HasValue
-    //            ? someAction(option.ValueOrFailure())
-    //            : noneAction();
-    //    }
-    //}
-
     /// <summary>
     /// <see cref="WebProxy"/> utility functions.
     /// </summary>
@@ -460,7 +689,7 @@ namespace LibCyStd
                 try { return new WebProxy(_input); }
                 catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                 {
-                    return None.Value;
+                    return Option.None;
                 }
             }
 
@@ -472,12 +701,12 @@ namespace LibCyStd
                 try { return new WebProxy(hostPort) { Credentials = cred }; }
                 catch (Exception e) when (e is ArgumentException || e is UriFormatException)
                 {
-                    return None.Value;
+                    return Option.None;
                 }
             }
 
             if (sp.Length == 2 && StringModule.AllNotEmptyOrWhiteSpace(sp)) return TryParse2(input);
-            else return sp.Length == 4 && StringModule.AllNotEmptyOrWhiteSpace(sp) ? TryParse4() : (Option<WebProxy>)None.Value;
+            else return sp.Length == 4 && StringModule.AllNotEmptyOrWhiteSpace(sp) ? TryParse4() : (Option<WebProxy>)Option.None;
         }
     }
 }

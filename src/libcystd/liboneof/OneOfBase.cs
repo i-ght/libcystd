@@ -90,7 +90,6 @@
 //            if (ReferenceEquals(null, obj))
 //                return false;
 
-
 //            if (ReferenceEquals(this, obj))
 //                return true;
 
@@ -254,7 +253,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -471,7 +469,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -736,7 +733,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -1049,7 +1045,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -1410,7 +1405,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -1819,7 +1813,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -2276,7 +2269,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;
@@ -2781,7 +2773,6 @@
 //        {
 //            if (ReferenceEquals(null, obj))
 //                return false;
-
 
 //            if (ReferenceEquals(this, obj))
 //                return true;

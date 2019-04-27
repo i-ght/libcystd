@@ -179,7 +179,7 @@ namespace LibCyStd.LibUv
         internal PollStatus(uv_poll_event mask)
         {
             Mask = mask;
-            Error = None.Value;
+            Error = Option.None;
         }
 
         internal PollStatus(uv_poll_event mask, UvException error)

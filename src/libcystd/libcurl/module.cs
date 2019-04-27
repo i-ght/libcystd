@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
+﻿using System.Runtime.InteropServices;
 
 namespace LibCyStd.LibCurl
 {
     public static class CurlModule
     {
-        public static void CurlEx(in string message) => throw new CurlException(message);
-
-        public static void CurlEx(in string message, in Exception inner) => throw new CurlException(message, inner);
+        public static Unit CurlEx(in string message) => throw new CurlException(message);
 
         public static string CurlEzStrErr(in CURLcode code)
         {
@@ -17,9 +12,7 @@ namespace LibCyStd.LibCurl
             return Marshal.PtrToStringAnsi(ptr);
         }
 
-        public static void CurlEx2(in string message, in CURLcode result) => throw new CurlException(message, result);
-
-        public static void CurlEx(in string funcName, in CURLcode result) => CurlEx($"{funcName} returned error: {result} ~ {CurlEzStrErr(result)}");
+        public static Unit CurlEx(in string message, in CURLcode result) => throw new CurlException(message, result);
 
         public static string CurlMultiStrErr(in CURLMcode code)
         {
@@ -31,24 +24,24 @@ namespace LibCyStd.LibCurl
         {
             if (code == CURLcode.OK)
                 return;
-
-            CurlEx("curl_easy_setopt", code);
+            else
+                CurlEx("curl_easy_setopt returned error", code);
         }
 
         public static void ValidateGetInfoResult(in CURLcode code)
         {
             if (code == CURLcode.OK)
                 return;
-
-            CurlEx("curl_easy_getinfo", code);
+            else
+                CurlEx("curl_easy_getinfo returned error", code);
         }
 
         public static void ValidateMultiResult(CURLMcode code)
         {
             if (code == CURLMcode.OK)
                 return;
-
-            throw new CurlException($"curl_multi_setopt returned: {code} ~ {CurlModule.CurlMultiStrErr(code)}");
+            else
+                throw new CurlException($"curl_multi_setopt returned: {code} ~ {CurlMultiStrErr(code)}");
         }
     }
 }

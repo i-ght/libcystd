@@ -73,7 +73,7 @@ namespace LibCyStd.LibUv
         public extern static int uv_unsafe_async_send(IntPtr handle);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int uv_tcp_init(IntPtr loop, IntPtr handle);
+        public static extern uv_err_code uv_tcp_init(IntPtr loop, IntPtr handle);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         public static extern int uv_tcp_bind(IntPtr handle, ref SockAddr addr, int flags);
@@ -82,7 +82,10 @@ namespace LibCyStd.LibUv
         public static extern int uv_tcp_open(IntPtr handle, IntPtr hSocket);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int uv_tcp_nodelay(IntPtr handle, int enable);
+        public static extern uv_err_code uv_tcp_nodelay(IntPtr handle, int enable);
+
+        [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
+        public static extern uv_err_code uv_tcp_keepalive(IntPtr handle, int enable, uint delay);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         public static extern int uv_pipe_init(IntPtr loop, IntPtr handle, int ipc);

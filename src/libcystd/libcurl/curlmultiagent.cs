@@ -101,21 +101,31 @@ namespace LibCyStd.LibCurl
 
         public void ExecReq(ReqCtx<TReqState> reqCtx)
         {
-            if (!_state.InactiveEzHandles.TryDequeue(out var easy))
+            Unit Enqueue()
             {
                 _state.PendingRequests.Enqueue(reqCtx);
-                return;
+                return Unit.Value;
             }
 
-            reqCtx.ConfigureEzReq(easy, reqCtx.ReqState);
+            Unit Send(in CurlEzHandle easy)
+            {
+                reqCtx.ConfigureEzReq(easy, reqCtx.ReqState);
 
-            if (!_state.ActiveEzHandles.ContainsKey(easy))
-                _state.ActiveEzHandles.TryAdd(easy, reqCtx);
-            else
-                _state.ActiveEzHandles[easy] = reqCtx;
+                if (!_state.ActiveEzHandles.ContainsKey(easy))
+                    _state.ActiveEzHandles.TryAdd(easy, reqCtx);
+                else
+                    _state.ActiveEzHandles[easy] = reqCtx;
 
-            _state.EzsToAdd.Enqueue(easy);
-            _state.MultiAdd.Send();
+                _state.EzsToAdd.Enqueue(easy);
+                _state.MultiAdd.Send();
+                return Unit.Value;
+            }
+
+            _ = _state.InactiveEzHandles.TryDequeue(out var easy) switch
+            {
+                true => Send(easy),
+                false => Enqueue()
+            };
         }
 
         /// <summary>
@@ -140,11 +150,14 @@ namespace LibCyStd.LibCurl
             return 0;
         }
 
-        private static void EzClearCookies(CurlEzHandle easy)
+        private static void EzClearCookies(in CurlEzHandle easy)
         {
             var result = libcurl.curl_easy_setopt(easy, CURLoption.COOKIELIST, "ALL");
-            if (result != CURLcode.OK)
-                throw new CurlException($"failed to clear curl ez req cookies. curl_easy_setopt returned {result} ~ {CurlModule.CurlEzStrErr(result)}");
+            _ = result switch
+            {
+                CURLcode.OK => Unit.Value,
+                _ => CurlModule.CurlEx("failed to clear ez req cookies", result)
+            };
         }
 
         private void CheckMultiInfo()
@@ -161,7 +174,7 @@ namespace LibCyStd.LibCurl
                 var reqCtx = _state.ActiveEzHandles[easy];
                 var action = reqCtx.HandleResp(easy, reqCtx.ReqState, message.data.result);
 
-                if (action == ReqOpCompletedAction.ReuseHandleAndRetry)
+                Unit Reuse()
                 {
                     CurlModule.ValidateMultiResult(
                         libcurl.curl_multi_remove_handle(_state.MultiHandle, easy)
@@ -169,8 +182,10 @@ namespace LibCyStd.LibCurl
                     CurlModule.ValidateMultiResult(
                         libcurl.curl_multi_add_handle(_state.MultiHandle, easy)
                     );
+                    return Unit.Value;
                 }
-                else if (action == ReqOpCompletedAction.ResetHandleAndNext)
+
+                Unit Reset()
                 {
                     CurlModule.ValidateMultiResult(
                          libcurl.curl_multi_remove_handle(_state.MultiHandle, easy)
@@ -181,11 +196,15 @@ namespace LibCyStd.LibCurl
                     _state.InactiveEzHandles.Enqueue(easy);
                     if (_state.PendingRequests.TryDequeue(out reqCtx))
                         ExecReq(reqCtx);
+                    return Unit.Value;
                 }
-                else
+
+                _ = action switch
                 {
-                    ExnModule.InvalidOp($"out of range ReqOpCompletedAction returned {action}");
-                }
+                    ReqOpCompletedAction.ResetHandleAndNext => Reset(),
+                    ReqOpCompletedAction.ReuseHandleAndRetry => Reuse(),
+                    _ => ExnModule.InvalidOp($"out of range ReqOpCompletedAction returned {action}")
+                };
             }
         }
 
@@ -225,20 +244,20 @@ namespace LibCyStd.LibCurl
             void PollCb(UvPoll _, int status, int events)
             {
                 var mask = (uv_poll_event)events;
-                PollStatus pollStatus;
-                if (status < 0)
+
+                PollStatus Err()
                 {
                     var errMsg = Marshal.PtrToStringAnsi(libuv.uv_strerror((uv_err_code)status));
-                    UvModule.UvEx(errMsg);
-                    pollStatus = new PollStatus(mask);
+                    throw new UvException(errMsg);
                 }
-                else
+
+                var pollStatus = status switch
                 {
-                    pollStatus = new PollStatus(mask);
-                }
+                    var i when i < 0 => Err(),
+                    _ => new PollStatus(mask)
+                };
 
                 CURLcselect flags = 0;
-
                 if ((pollStatus.Mask & uv_poll_event.UV_READABLE) != 0)
                     flags |= CURLcselect.IN;
 
@@ -360,6 +379,7 @@ namespace LibCyStd.LibCurl
             if (_disposed) return;
             _state.Disposer.Send();
             _disposeEvent.Wait();
+            _disposeEvent.Dispose();
         }
 
         public CurlMultiAgent(in int ezPoolSize)

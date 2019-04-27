@@ -1,5 +1,4 @@
-﻿using LibCyStd.LibOneOf.Types;
-using LibCyStd.Seq;
+﻿using LibCyStd.Seq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,7 +40,7 @@ namespace LibCyStd
             Option<(string key, string val)> ParseLine(string line)
             {
                 var sp = line.Split('=');
-                return sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp) ? (Option<(string key, string val)>)None.Value : (Option<(string key, string val)>)(sp[0], sp[1]);
+                return sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp) ? (Option<(string key, string val)>)Option.None : (Option<(string key, string val)>)(sp[0], sp[1]);
             }
             return DictModule.OfSeq(lines.Choose(ParseLine));
         }
@@ -56,16 +55,16 @@ namespace LibCyStd
         public Option<T> TryGetValue<T>(in string key) where T : IConvertible
         {
             if (!_values.ContainsKey(key))
-                return None.Value;
+                return Option.None;
 
             try { return (T)Convert.ChangeType(_values[key], typeof(T)); }
-            catch (Exception e) when
-                (e is InvalidCastException
+            catch (Exception e) when (
+                e is InvalidCastException
                 || e is FormatException
                 || e is OverflowException
                 || e is ArgumentNullException)
             {
-                return None.Value;
+                return Option.None;
             }
         }
 
@@ -87,7 +86,7 @@ namespace LibCyStd
             }
             else if (!_values.ContainsKey(key))
             {
-                _values.Add(key, value.ToString());
+                _values.Add(key, str);
                 OnAddedOrUpdated();
             }
         }

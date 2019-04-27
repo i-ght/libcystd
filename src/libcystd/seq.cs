@@ -1,5 +1,4 @@
-﻿using LibCyStd.LibOneOf.Types;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -57,8 +56,8 @@ namespace LibCyStd.Seq
             return
                 seq
                 .Select(chooser)
-                .Where(OptionModule.IsSome)
-                .Select(OptionModule.Value);
+                .Where(Option.IsSome)
+                .Select(Option.Value);
         }
 
         public static IEnumerable<string> OfFile(in string path)
@@ -72,7 +71,7 @@ namespace LibCyStd.Seq
                     return item;
             }
 
-            return None.Value;
+            return Option.None;
         }
     }
 
@@ -133,6 +132,14 @@ namespace LibCyStd.Seq
             return OfSeq(sequence, EqualityComparer<TKey>.Default);
         }
 
+        public static void AddOrUpdate<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
+        {
+            if (dict.ContainsKey(key))
+                dict[key] = value;
+            else
+                dict.Add(key, value);
+        }
+
         public static IEnumerable<(TKey key, TValue value)> ToSeq<TKey, TValue>(this IDictionary<TKey, TValue> dict)
         {
             var lst = new List<(TKey k, TValue v)>(dict.Count);
@@ -141,11 +148,11 @@ namespace LibCyStd.Seq
             return lst;
         }
 
-        public static Option<TValue> TryGetValue<TKey, TValue>(
+        public static Option<TValue> TryGet<TKey, TValue>(
             this IDictionary<TKey, TValue> dict,
             in TKey key)
         {
-            return dict.TryGetValue(key, out var value) ? (Option<TValue>)value : (Option<TValue>)None.Value;
+            return dict.TryGetValue(key, out var value) ? new Option<TValue>(value) : Option.None;
         }
     }
 
@@ -179,7 +186,7 @@ namespace LibCyStd.Seq
             this IReadOnlyDictionary<TKey, TValue> dict,
             in TKey key)
         {
-            return dict.TryGetValue(key, out TValue value) ? (Option<TValue>)value : (Option<TValue>)None.Value;
+            return dict.TryGetValue(key, out TValue value) ? new Option<TValue>(value) : Option.None;
         }
     }
 

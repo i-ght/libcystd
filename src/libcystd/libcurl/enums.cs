@@ -1557,9 +1557,9 @@ namespace LibCyStd.LibCurl
         SMB = 1 << 26,
         SMBS = 1 << 27,
 
-                               /// <summary>
-                               ///     Enable everything.
-                               /// </summary>
+        /// <summary>
+        ///     Enable everything.
+        /// </summary>
         ALL = ~0
 #pragma warning restore RCS1157 // Composite enum value contains undefined flag.
 #pragma warning restore RCS1154 // Sort enum members.

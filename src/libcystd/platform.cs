@@ -1,9 +1,9 @@
 ﻿using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace LibCyStd.LibUv
+namespace LibCyStd
 {
-    internal static class Platform
+    public static class Platform
     {
         public static bool OSSupportsIPv6 { get; }
 
@@ -23,7 +23,6 @@ namespace LibCyStd.LibUv
             IsLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
             IsMacOS = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
             IsUnix = IsLinux || IsMacOS;
-
             OSSupportsIPv6 = Socket.OSSupportsIPv6;
             OSSupportsIPv4 = Socket.OSSupportsIPv4;
         }

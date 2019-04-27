@@ -13,9 +13,11 @@ namespace LibCyStd.LibCurl
                 Directory.CreateDirectory(dir);
 
             var file = $"{dir}{Path.DirectorySeparatorChar}curl-ca-bundle.crt";
-            if (!File.Exists(file))
-            {
-                var tmp = @"##
+            if (File.Exists(file))
+                return;
+
+#pragma warning disable RCS1118 // Mark local variable as const.
+            var tmp = @"##
 ## Bundle of CA Root Certificates
 ##
 ## Certificate data from Mozilla as of: Wed Jan 23 04:12:09 2019 GMT
@@ -3417,10 +3419,10 @@ aX5LaAzHHjcng6WMxwLkFM1JAbBzs/3GkDpv0mztO+7skb6iQ12LAEpmJURw3kAP+HwV96LOPNde
 E4yBFxgX0b3xdxA61GU5wSesVywlVP+i2k+KYTlerj1KjL0=
 -----END CERTIFICATE-----
 ";
-                using var fs = File.Create(file);
-                using var sw = new StreamWriter(fs);
-                sw.Write(tmp);
-            }
+#pragma warning restore RCS1118 // Mark local variable as const.
+            using var fs = File.Create(file);
+            using var sw = new StreamWriter(fs);
+            sw.Write(tmp);
         }
     }
 }

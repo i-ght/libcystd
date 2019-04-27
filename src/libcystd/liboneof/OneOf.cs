@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LibCyStd.LibOneOf
 {
-    public struct OneOf<T0> : IOneOf
+    public readonly struct OneOf<T0> : IOneOf
     {
         private readonly int _index;
         private readonly T0 _value0;
@@ -79,7 +79,7 @@ namespace LibCyStd.LibOneOf
             );
         }
 
-        public bool Equals(OneOf<T0> other) =>
+        public bool Equals(in OneOf<T0> other) =>
             _index == other._index
             && EqualityComparer<T0>.Default.Equals(_value0, other._value0);
 
@@ -96,7 +96,7 @@ namespace LibCyStd.LibOneOf
         }
     }
 
-    public struct OneOf<T0, T1> : IOneOf
+    public readonly struct OneOf<T0, T1> : IOneOf
     {
         private readonly int _index;
         private readonly T0 _value0;
@@ -127,7 +127,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -139,11 +139,9 @@ namespace LibCyStd.LibOneOf
             }
         }
 
-        public static implicit operator OneOf<T0, T1>(T0 t) => new OneOf<T0, T1>(0, value0: t);
-
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -155,6 +153,7 @@ namespace LibCyStd.LibOneOf
             }
         }
 
+        public static implicit operator OneOf<T0, T1>(T0 t) => new OneOf<T0, T1>(0, value0: t);
         public static implicit operator OneOf<T0, T1>(T1 t) => new OneOf<T0, T1>(1, value1: t);
 
         public void Switch(Action<T0> f0, Action<T1> f1)
@@ -221,19 +220,19 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out T1 remainder)
         {
-            value = IsT0 ? AsT0 : default!;
-            remainder = IsT0 ? default! : AsT1;
+            value = IsT0 ? T0Value : default!;
+            remainder = IsT0 ? default! : T1Value;
             return IsT0;
         }
 
         public bool TryPickT1(out T1 value, out T0 remainder)
         {
-            value = IsT1 ? AsT1 : default!;
-            remainder = IsT1 ? default! : AsT0;
+            value = IsT1 ? T1Value : default!;
+            remainder = IsT1 ? default! : T0Value;
             return IsT1;
         }
 
-        private bool Equals(OneOf<T0, T1> other)
+        private bool Equals(in OneOf<T0, T1> other)
         {
             if (_index != other._index)
             {
@@ -272,9 +271,16 @@ namespace LibCyStd.LibOneOf
                 return (hashCode * 397) ^ _index;
             }
         }
+
+        public void Deconstruct(out int index, out T0 value0, out T1 value1)
+        {
+            index = _index;
+            value0 = _value0;
+            value1 = _value1;
+        }
     }
 
-    public struct OneOf<T0, T1, T2> : IOneOf
+    public readonly struct OneOf<T0, T1, T2> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -309,7 +315,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -325,7 +331,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -341,7 +347,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -448,7 +454,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2);
@@ -457,7 +463,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2);
@@ -466,14 +472,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException());
             return IsT2;
         }
 
-        private bool Equals(OneOf<T0, T1, T2> other)
+        private bool Equals(in OneOf<T0, T1, T2> other)
         {
             if (_index != other._index)
             {
@@ -516,9 +522,17 @@ namespace LibCyStd.LibOneOf
                 return (hashCode * 397) ^ _index;
             }
         }
+
+        public void Deconstruct(out int index, out T0 value0, out T1 value1, out T2 value2)
+        {
+            index = _index;
+            value0 = _value0;
+            value1 = _value1;
+            value2 = _value2;
+        }
     }
 
-    public struct OneOf<T0, T1, T2, T3> : IOneOf
+    public readonly struct OneOf<T0, T1, T2, T3> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -557,7 +571,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -573,7 +587,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -589,7 +603,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -605,7 +619,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT3 => _index == 3;
 
-        public T3 AsT3
+        public T3 T3Value
         {
             get
             {
@@ -743,7 +757,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2, T3> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2, T3>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2, t3 => t3);
@@ -752,7 +766,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2, T3> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2, T3>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2, t3 => t3);
@@ -761,7 +775,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1, T3> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1, T3>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException(), t3 => t3);
@@ -770,14 +784,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT3(out T3 value, out OneOf<T0, T1, T2> remainder)
         {
-            value = IsT3 ? AsT3 : default!;
+            value = IsT3 ? T3Value : default!;
             remainder = IsT3
                 ? default
                 : Match<OneOf<T0, T1, T2>>(t0 => t0, t1 => t1, t2 => t2, _ => throw new InvalidOperationException());
             return IsT3;
         }
 
-        private bool Equals(OneOf<T0, T1, T2, T3> other)
+        private bool Equals(in OneOf<T0, T1, T2, T3> other)
         {
             if (_index != other._index)
             {
@@ -824,9 +838,18 @@ namespace LibCyStd.LibOneOf
                 return (hashCode * 397) ^ _index;
             }
         }
+
+        public void Deconstruct(out int index, out T0 value0, out T1 value1, out T2 value2, out T3 value3)
+        {
+            index = _index;
+            value0 = _value0;
+            value1 = _value1;
+            value2 = _value2;
+            value3 = _value3;
+        }
     }
 
-    public struct OneOf<T0, T1, T2, T3, T4> : IOneOf
+    public readonly struct OneOf<T0, T1, T2, T3, T4> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -869,7 +892,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -885,7 +908,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -901,7 +924,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -917,7 +940,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT3 => _index == 3;
 
-        public T3 AsT3
+        public T3 T3Value
         {
             get
             {
@@ -933,7 +956,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT4 => _index == 4;
 
-        public T4 AsT4
+        public T4 T4Value
         {
             get
             {
@@ -1104,7 +1127,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2, T3, T4> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2, T3, T4>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2, t3 => t3, t4 => t4);
@@ -1113,7 +1136,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2, T3, T4> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2, T3, T4>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2, t3 => t3, t4 => t4);
@@ -1122,7 +1145,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1, T3, T4> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1, T3, T4>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException(), t3 => t3, t4 => t4);
@@ -1131,7 +1154,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT3(out T3 value, out OneOf<T0, T1, T2, T4> remainder)
         {
-            value = IsT3 ? AsT3 : default!;
+            value = IsT3 ? T3Value : default!;
             remainder = IsT3
                 ? default
                 : Match<OneOf<T0, T1, T2, T4>>(t0 => t0, t1 => t1, t2 => t2, _ => throw new InvalidOperationException(), t4 => t4);
@@ -1140,14 +1163,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT4(out T4 value, out OneOf<T0, T1, T2, T3> remainder)
         {
-            value = IsT4 ? AsT4 : default!;
+            value = IsT4 ? T4Value : default!;
             remainder = IsT4
                 ? default
                 : Match<OneOf<T0, T1, T2, T3>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, _ => throw new InvalidOperationException());
             return IsT4;
         }
 
-        private bool Equals(OneOf<T0, T1, T2, T3, T4> other)
+        private bool Equals(in OneOf<T0, T1, T2, T3, T4> other)
         {
             if (_index != other._index)
             {
@@ -1198,9 +1221,19 @@ namespace LibCyStd.LibOneOf
                 return (hashCode * 397) ^ _index;
             }
         }
+
+        public void Deconstruct(out int index, out T0 value0, out T1 value1, out T2 value2, out T3 value3, out T4 value4)
+        {
+            index = _index;
+            value0 = _value0;
+            value1 = _value1;
+            value2 = _value2;
+            value3 = _value3;
+            value4 = _value4;
+        }
     }
 
-    public struct OneOf<T0, T1, T2, T3, T4, T5> : IOneOf
+    public readonly struct OneOf<T0, T1, T2, T3, T4, T5> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -1247,7 +1280,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -1263,7 +1296,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -1279,7 +1312,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -1295,7 +1328,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT3 => _index == 3;
 
-        public T3 AsT3
+        public T3 T3Value
         {
             get
             {
@@ -1311,7 +1344,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT4 => _index == 4;
 
-        public T4 AsT4
+        public T4 T4Value
         {
             get
             {
@@ -1327,7 +1360,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT5 => _index == 5;
 
-        public T5 AsT5
+        public T5 T5Value
         {
             get
             {
@@ -1533,7 +1566,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2, T3, T4, T5> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2, T3, T4, T5>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5);
@@ -1542,7 +1575,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2, T3, T4, T5> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2, T3, T4, T5>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2, t3 => t3, t4 => t4, t5 => t5);
@@ -1551,7 +1584,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1, T3, T4, T5> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1, T3, T4, T5>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException(), t3 => t3, t4 => t4, t5 => t5);
@@ -1560,7 +1593,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT3(out T3 value, out OneOf<T0, T1, T2, T4, T5> remainder)
         {
-            value = IsT3 ? AsT3 : default!;
+            value = IsT3 ? T3Value : default!;
             remainder = IsT3
                 ? default
                 : Match<OneOf<T0, T1, T2, T4, T5>>(t0 => t0, t1 => t1, t2 => t2, _ => throw new InvalidOperationException(), t4 => t4, t5 => t5);
@@ -1569,7 +1602,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT4(out T4 value, out OneOf<T0, T1, T2, T3, T5> remainder)
         {
-            value = IsT4 ? AsT4 : default!;
+            value = IsT4 ? T4Value : default!;
             remainder = IsT4
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T5>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, _ => throw new InvalidOperationException(), t5 => t5);
@@ -1578,14 +1611,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT5(out T5 value, out OneOf<T0, T1, T2, T3, T4> remainder)
         {
-            value = IsT5 ? AsT5 : default!;
+            value = IsT5 ? T5Value : default!;
             remainder = IsT5
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, _ => throw new InvalidOperationException());
             return IsT5;
         }
 
-        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5> other)
+        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5> other)
         {
             if (_index != other._index)
             {
@@ -1642,7 +1675,7 @@ namespace LibCyStd.LibOneOf
         }
     }
 
-    public struct OneOf<T0, T1, T2, T3, T4, T5, T6> : IOneOf
+    public readonly struct OneOf<T0, T1, T2, T3, T4, T5, T6> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -1693,7 +1726,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -1709,7 +1742,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -1725,7 +1758,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -1741,7 +1774,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT3 => _index == 3;
 
-        public T3 AsT3
+        public T3 T3Value
         {
             get
             {
@@ -1757,7 +1790,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT4 => _index == 4;
 
-        public T4 AsT4
+        public T4 T4Value
         {
             get
             {
@@ -1773,7 +1806,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT5 => _index == 5;
 
-        public T5 AsT5
+        public T5 T5Value
         {
             get
             {
@@ -1789,7 +1822,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT6 => _index == 6;
 
-        public T6 AsT6
+        public T6 T6Value
         {
             get
             {
@@ -2032,7 +2065,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2, T3, T4, T5, T6> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2, T3, T4, T5, T6>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6);
@@ -2041,7 +2074,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2, T3, T4, T5, T6> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2, T3, T4, T5, T6>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6);
@@ -2050,7 +2083,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1, T3, T4, T5, T6> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1, T3, T4, T5, T6>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException(), t3 => t3, t4 => t4, t5 => t5, t6 => t6);
@@ -2059,7 +2092,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT3(out T3 value, out OneOf<T0, T1, T2, T4, T5, T6> remainder)
         {
-            value = IsT3 ? AsT3 : default!;
+            value = IsT3 ? T3Value : default!;
             remainder = IsT3
                 ? default
                 : Match<OneOf<T0, T1, T2, T4, T5, T6>>(t0 => t0, t1 => t1, t2 => t2, _ => throw new InvalidOperationException(), t4 => t4, t5 => t5, t6 => t6);
@@ -2068,7 +2101,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT4(out T4 value, out OneOf<T0, T1, T2, T3, T5, T6> remainder)
         {
-            value = IsT4 ? AsT4 : default!;
+            value = IsT4 ? T4Value : default!;
             remainder = IsT4
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T5, T6>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, _ => throw new InvalidOperationException(), t5 => t5, t6 => t6);
@@ -2077,7 +2110,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT5(out T5 value, out OneOf<T0, T1, T2, T3, T4, T6> remainder)
         {
-            value = IsT5 ? AsT5 : default!;
+            value = IsT5 ? T5Value : default!;
             remainder = IsT5
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T6>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, _ => throw new InvalidOperationException(), t6 => t6);
@@ -2086,14 +2119,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT6(out T6 value, out OneOf<T0, T1, T2, T3, T4, T5> remainder)
         {
-            value = IsT6 ? AsT6 : default!;
+            value = IsT6 ? T6Value : default!;
             remainder = IsT6
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T5>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, _ => throw new InvalidOperationException());
             return IsT6;
         }
 
-        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5, T6> other)
+        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5, T6> other)
         {
             if (_index != other._index)
             {
@@ -2154,7 +2187,7 @@ namespace LibCyStd.LibOneOf
         }
     }
 
-    public struct OneOf<T0, T1, T2, T3, T4, T5, T6, T7> : IOneOf
+    public readonly struct OneOf<T0, T1, T2, T3, T4, T5, T6, T7> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -2209,7 +2242,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -2225,7 +2258,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -2241,7 +2274,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -2257,7 +2290,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT3 => _index == 3;
 
-        public T3 AsT3
+        public T3 T3Value
         {
             get
             {
@@ -2273,7 +2306,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT4 => _index == 4;
 
-        public T4 AsT4
+        public T4 T4Value
         {
             get
             {
@@ -2289,7 +2322,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT5 => _index == 5;
 
-        public T5 AsT5
+        public T5 T5Value
         {
             get
             {
@@ -2305,7 +2338,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT6 => _index == 6;
 
-        public T6 AsT6
+        public T6 T6Value
         {
             get
             {
@@ -2321,7 +2354,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT7 => _index == 7;
 
-        public T7 AsT7
+        public T7 T7Value
         {
             get
             {
@@ -2603,7 +2636,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2, T3, T4, T5, T6, T7> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2, T3, T4, T5, T6, T7>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7);
@@ -2612,7 +2645,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2, T3, T4, T5, T6, T7> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2, T3, T4, T5, T6, T7>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7);
@@ -2621,7 +2654,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1, T3, T4, T5, T6, T7> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1, T3, T4, T5, T6, T7>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException(), t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7);
@@ -2630,7 +2663,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT3(out T3 value, out OneOf<T0, T1, T2, T4, T5, T6, T7> remainder)
         {
-            value = IsT3 ? AsT3 : default!;
+            value = IsT3 ? T3Value : default!;
             remainder = IsT3
                 ? default
                 : Match<OneOf<T0, T1, T2, T4, T5, T6, T7>>(t0 => t0, t1 => t1, t2 => t2, _ => throw new InvalidOperationException(), t4 => t4, t5 => t5, t6 => t6, t7 => t7);
@@ -2639,7 +2672,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT4(out T4 value, out OneOf<T0, T1, T2, T3, T5, T6, T7> remainder)
         {
-            value = IsT4 ? AsT4 : default!;
+            value = IsT4 ? T4Value : default!;
             remainder = IsT4
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T5, T6, T7>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, _ => throw new InvalidOperationException(), t5 => t5, t6 => t6, t7 => t7);
@@ -2648,7 +2681,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT5(out T5 value, out OneOf<T0, T1, T2, T3, T4, T6, T7> remainder)
         {
-            value = IsT5 ? AsT5 : default!;
+            value = IsT5 ? T5Value : default!;
             remainder = IsT5
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T6, T7>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, _ => throw new InvalidOperationException(), t6 => t6, t7 => t7);
@@ -2657,7 +2690,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT6(out T6 value, out OneOf<T0, T1, T2, T3, T4, T5, T7> remainder)
         {
-            value = IsT6 ? AsT6 : default!;
+            value = IsT6 ? T6Value : default!;
             remainder = IsT6
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T5, T7>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, _ => throw new InvalidOperationException(), t7 => t7);
@@ -2666,14 +2699,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT7(out T7 value, out OneOf<T0, T1, T2, T3, T4, T5, T6> remainder)
         {
-            value = IsT7 ? AsT7 : default!;
+            value = IsT7 ? T7Value : default!;
             remainder = IsT7
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T5, T6>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, _ => throw new InvalidOperationException());
             return IsT7;
         }
 
-        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5, T6, T7> other)
+        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5, T6, T7> other)
         {
             if (_index != other._index)
             {
@@ -2738,7 +2771,7 @@ namespace LibCyStd.LibOneOf
         }
     }
 
-    public struct OneOf<T0, T1, T2, T3, T4, T5, T6, T7, T8> : IOneOf
+    public readonly struct OneOf<T0, T1, T2, T3, T4, T5, T6, T7, T8> : IOneOf
     {
         private readonly T0 _value0;
         private readonly T1 _value1;
@@ -2797,7 +2830,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT0 => _index == 0;
 
-        public T0 AsT0
+        public T0 T0Value
         {
             get
             {
@@ -2813,7 +2846,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT1 => _index == 1;
 
-        public T1 AsT1
+        public T1 T1Value
         {
             get
             {
@@ -2829,7 +2862,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT2 => _index == 2;
 
-        public T2 AsT2
+        public T2 T2Value
         {
             get
             {
@@ -2845,7 +2878,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT3 => _index == 3;
 
-        public T3 AsT3
+        public T3 T3Value
         {
             get
             {
@@ -2861,7 +2894,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT4 => _index == 4;
 
-        public T4 AsT4
+        public T4 T4Value
         {
             get
             {
@@ -2877,7 +2910,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT5 => _index == 5;
 
-        public T5 AsT5
+        public T5 T5Value
         {
             get
             {
@@ -2893,7 +2926,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT6 => _index == 6;
 
-        public T6 AsT6
+        public T6 T6Value
         {
             get
             {
@@ -2909,7 +2942,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT7 => _index == 7;
 
-        public T7 AsT7
+        public T7 T7Value
         {
             get
             {
@@ -2925,7 +2958,7 @@ namespace LibCyStd.LibOneOf
 
         public bool IsT8 => _index == 8;
 
-        public T8 AsT8
+        public T8 T8Value
         {
             get
             {
@@ -3248,7 +3281,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT0(out T0 value, out OneOf<T1, T2, T3, T4, T5, T6, T7, T8> remainder)
         {
-            value = IsT0 ? AsT0 : default!;
+            value = IsT0 ? T0Value : default!;
             remainder = IsT0
                 ? default
                 : Match<OneOf<T1, T2, T3, T4, T5, T6, T7, T8>>(_ => throw new InvalidOperationException(), t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7, t8 => t8);
@@ -3257,7 +3290,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT1(out T1 value, out OneOf<T0, T2, T3, T4, T5, T6, T7, T8> remainder)
         {
-            value = IsT1 ? AsT1 : default!;
+            value = IsT1 ? T1Value : default!;
             remainder = IsT1
                 ? default
                 : Match<OneOf<T0, T2, T3, T4, T5, T6, T7, T8>>(t0 => t0, _ => throw new InvalidOperationException(), t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7, t8 => t8);
@@ -3266,7 +3299,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT2(out T2 value, out OneOf<T0, T1, T3, T4, T5, T6, T7, T8> remainder)
         {
-            value = IsT2 ? AsT2 : default!;
+            value = IsT2 ? T2Value : default!;
             remainder = IsT2
                 ? default
                 : Match<OneOf<T0, T1, T3, T4, T5, T6, T7, T8>>(t0 => t0, t1 => t1, _ => throw new InvalidOperationException(), t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7, t8 => t8);
@@ -3275,7 +3308,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT3(out T3 value, out OneOf<T0, T1, T2, T4, T5, T6, T7, T8> remainder)
         {
-            value = IsT3 ? AsT3 : default!;
+            value = IsT3 ? T3Value : default!;
             remainder = IsT3
                 ? default
                 : Match<OneOf<T0, T1, T2, T4, T5, T6, T7, T8>>(t0 => t0, t1 => t1, t2 => t2, _ => throw new InvalidOperationException(), t4 => t4, t5 => t5, t6 => t6, t7 => t7, t8 => t8);
@@ -3284,7 +3317,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT4(out T4 value, out OneOf<T0, T1, T2, T3, T5, T6, T7, T8> remainder)
         {
-            value = IsT4 ? AsT4 : default!;
+            value = IsT4 ? T4Value : default!;
             remainder = IsT4
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T5, T6, T7, T8>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, _ => throw new InvalidOperationException(), t5 => t5, t6 => t6, t7 => t7, t8 => t8);
@@ -3293,7 +3326,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT5(out T5 value, out OneOf<T0, T1, T2, T3, T4, T6, T7, T8> remainder)
         {
-            value = IsT5 ? AsT5 : default!;
+            value = IsT5 ? T5Value : default!;
             remainder = IsT5
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T6, T7, T8>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, _ => throw new InvalidOperationException(), t6 => t6, t7 => t7, t8 => t8);
@@ -3302,7 +3335,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT6(out T6 value, out OneOf<T0, T1, T2, T3, T4, T5, T7, T8> remainder)
         {
-            value = IsT6 ? AsT6 : default!;
+            value = IsT6 ? T6Value : default!;
             remainder = IsT6
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T5, T7, T8>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, _ => throw new InvalidOperationException(), t7 => t7, t8 => t8);
@@ -3311,7 +3344,7 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT7(out T7 value, out OneOf<T0, T1, T2, T3, T4, T5, T6, T8> remainder)
         {
-            value = IsT7 ? AsT7 : default!;
+            value = IsT7 ? T7Value : default!;
             remainder = IsT7
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T5, T6, T8>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, _ => throw new InvalidOperationException(), t8 => t8);
@@ -3320,14 +3353,14 @@ namespace LibCyStd.LibOneOf
 
         public bool TryPickT8(out T8 value, out OneOf<T0, T1, T2, T3, T4, T5, T6, T7> remainder)
         {
-            value = IsT8 ? AsT8 : default!;
+            value = IsT8 ? T8Value : default!;
             remainder = IsT8
                 ? default
                 : Match<OneOf<T0, T1, T2, T3, T4, T5, T6, T7>>(t0 => t0, t1 => t1, t2 => t2, t3 => t3, t4 => t4, t5 => t5, t6 => t6, t7 => t7, _ => throw new InvalidOperationException());
             return IsT8;
         }
 
-        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5, T6, T7, T8> other)
+        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5, T6, T7, T8> other)
         {
             if (_index != other._index)
             {
