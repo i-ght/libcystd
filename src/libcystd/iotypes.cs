@@ -232,8 +232,8 @@ namespace LibCyStd.IO
             if (_disposed) return;
             if (_fileStream.IsSome)
                 _fileStream.Value.Dispose();
-            if (_writer.IsSome)
-                _writer.Value.Dispose();
+            //if (_writer.IsSome)
+            //    _writer.Value.Dispose();
             _set.Clear();
             _disposed = true;
         }

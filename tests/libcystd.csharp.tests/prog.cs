@@ -33,7 +33,7 @@ namespace LibCyStd.CSharp.Tests
             int v1;
             for (v1 = 0; v1 < arg3.Length; ++v1)
             {
-                v0 = v0 + a(arg3[v1], arg4);
+                v0 += a(arg3[v1], arg4);
             }
 
             return v0;

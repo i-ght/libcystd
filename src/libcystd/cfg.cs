@@ -40,7 +40,7 @@ namespace LibCyStd
             Option<(string key, string val)> ParseLine(string line)
             {
                 var sp = line.Split('=');
-                return sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp) ? (Option<(string key, string val)>)Option.None : (Option<(string key, string val)>)(sp[0], sp[1]);
+                return sp.Length != 2 || StringModule.AnyEmptyOrWhiteSpace(sp) ? Option.None : Option.Some((sp[0], sp[1]));
             }
             return DictModule.OfSeq(lines.Choose(ParseLine));
         }

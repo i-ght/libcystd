@@ -7,11 +7,11 @@ namespace LibCyStd.Wpf.Tests
     internal static class Program
     {
         [STAThread]
-        private static void Main(string[] args)
+        private static int Main()
         {
             var app = new Application();
-            var win = new MainWindow();
-            app.Run(win);
+            var mWin = new MainWindow();
+            return app.Run(mWin);
         }
     }
 }

@@ -16,13 +16,13 @@ using System.Threading.Tasks;
 
 namespace LibCyStd
 {
-    public struct Unit
+    public readonly struct Unit
     {
         public static Unit Value { get; }
         static Unit() => Value = new Unit();
     }
 
-    public struct Option<TValue> : IEquatable<Option<TValue>>
+    public readonly struct Option<TValue> : IEquatable<Option<TValue>>
     {
         private readonly bool _initialized;
         private readonly OneOf<TValue, None> _value;
@@ -38,7 +38,7 @@ namespace LibCyStd
         }
 
         public bool IsSome => _initialized && _value.IsT0;
-        public bool IsNone => _value.IsT1;
+        public bool IsNone => !_initialized || _value.IsT1;
 
         public (bool success, TValue value) TryGetValue() => _value.IsT0 ? (true, _value.T0Value) : ((bool success, TValue value))(false, default!);
 
@@ -61,10 +61,8 @@ namespace LibCyStd
 
         public void Deconstruct(out bool isSome, out TValue value)
         {
-#pragma warning disable CS8601 // Possible null reference assignment. It's ok to be null in this function. Caller is responsible for checking if it's safe to access value by seeing if isSome is true.
-            value = IsSome ? _value.T0Value : default;
-#pragma warning restore CS8601 // Possible null reference assignment.
             isSome = IsSome;
+            value = IsSome ? _value.T0Value : default!;
         }
 
         public void Switch(Action<TValue> f0, Action<None> f1) => _value.Switch(f0, f1);
@@ -112,6 +110,12 @@ namespace LibCyStd
         public static Option<TValue> Some<TValue>(in TValue value) => new Option<TValue>(value);
 
         public static None None { get; }
+
+        public static Option<T> NoneOpt<T>()
+        {
+            return new Option<T>(None);
+        }
+
         public static Option<TValue> CreateNone<TValue>() => new Option<TValue>(None);
 
         static Option() => None = None.Value;
@@ -267,9 +271,7 @@ namespace LibCyStd
             var msg = $"Message: {ex.Message}";
             var stack = $"StAcK TrAcE: {ex.StackTrace}";
 
-            var list = ReadOnlyCollectionModule.OfSeq(
-                new[]
-                {
+            var list = ReadOnlyCollectionModule.OfSeq(new[] {
                     src,
                     @type,
                     date,
@@ -610,7 +612,7 @@ namespace LibCyStd
             var sb = new StringBuilder(len);
             for (var i = 0; i < len; i++)
                 sb.Append(c.Random());
-            
+
             return sb.ToString();
         }
 
@@ -644,9 +646,7 @@ namespace LibCyStd
         public static unsafe string OfSpan(in ReadOnlySpan<byte> bytes)
         {
             fixed (byte* b = bytes)
-            {
                 return Encoding.UTF8.GetString(b, bytes.Length);
-            }
         }
 
         public static string OfMemory(in ReadOnlyMemory<byte> bytes) => OfSpan(bytes.Span);

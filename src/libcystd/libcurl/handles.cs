@@ -19,9 +19,9 @@ namespace LibCyStd.LibCurl
         protected virtual void Dispose(in bool disposing)
         {
             if (_disposed) return;
+            _disposed = true;
             if (disposing) { }
             Delete();
-            _disposed = true;
         }
 
         public void Dispose()

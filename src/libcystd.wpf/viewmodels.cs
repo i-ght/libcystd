@@ -17,7 +17,7 @@ using System.Windows.Media;
 
 namespace LibCyStd.Wpf
 {
-    using ConfigValue = OneOf<int, bool, string, ConfigSequence>;
+    using ConfigValue = OneOf<int, bool, string, ConfigSequence, ConfigFile>;
 
     public static class ConfigValueModule
     {
@@ -27,6 +27,7 @@ namespace LibCyStd.Wpf
                 i => i.ToString(),
                 b => b.ToString(),
                 s => s,
+                f => f.FileInfo.Name,
                 f => f.FileInfo.Name
             );
         }
@@ -43,12 +44,27 @@ namespace LibCyStd.Wpf
             Items = items;
         }
 
+        public override string ToString() => FileInfo.FullName;
+        
+
+        public static ConfigSequence Empty { get; } = new ConfigSequence(new FileInfo(Path.GetRandomFileName()), SeqModule.Empty<string>());
+    }
+
+    public class ConfigFile
+    {
+        public FileInfo FileInfo { get; }
+
+        public ConfigFile(FileInfo fileInfo)
+        {
+            FileInfo = fileInfo;
+        }
+
         public override string ToString()
         {
             return FileInfo.FullName;
         }
 
-        public static ConfigSequence Empty { get; } = new ConfigSequence(new FileInfo(Path.GetRandomFileName()), SeqModule.Empty<string>());
+        public static ConfigFile Empty { get; } = new ConfigFile(new FileInfo(Path.GetRandomFileName()));
     }
 
     public abstract class ViewModelBase : INotifyPropertyChanged
@@ -63,7 +79,6 @@ namespace LibCyStd.Wpf
 
     public class WpfInt64Label : ViewModelBase
     {
-
         private string _displayTxt;
         private long _value;
 
@@ -127,7 +142,6 @@ namespace LibCyStd.Wpf
                 OnPropertyChanged(nameof(Value));
             }
         }
-
 
         public string DisplayText
         {
@@ -197,13 +211,14 @@ namespace LibCyStd.Wpf
                         1 => SetBoolValue(),
                         2 => SetStrValue(),
                         3 => Set(),
+                        4 => Set(),
                         _ => throw new InvalidOperationException("invalid ConfigValue option.")
                     };
                 }
 
                 _ = _value switch
                 {
-                    (int index, _, _, _, _) => SetValue(index)
+                    (int index, _, _, _, _, _) => SetValue(index)
                 };
             }
         }
@@ -223,6 +238,7 @@ namespace LibCyStd.Wpf
                 i => i.ToString(),
                 b => b.ToString(),
                 s => s,
+                f => f.FileInfo.Exists ? f.FileInfo.FullName : "",
                 f => f.FileInfo.Exists ? f.FileInfo.FullName : ""
             );
         }
@@ -238,9 +254,9 @@ namespace LibCyStd.Wpf
         private Unit UpdateStateOnValueChanged(ConfigDataGridItem item)
         {
             _whenValueChanged.OnNext((item.Name, item.Value));
-            var value = item.Value switch
-            {
-                (3, _, _, _, ConfigSequence f) => f.FileInfo.FullName,
+            var value = item.Value switch {
+                (3, _, _, _, ConfigSequence f, _) => f.FileInfo.FullName,
+                (4, _, _, _, _, ConfigFile f) => f.FileInfo.FullName,
                 _ => item.DisplayText
             };
             _iniCfg.AddOrUpdate(item.Name, value);
@@ -316,10 +332,18 @@ namespace LibCyStd.Wpf
             return dataGrid;
         }
 
-        private Unit ClearLoadedFile(ConfigDataGridItem item)
+        private Unit ClearLoadedSeq(ConfigDataGridItem item)
         {
             item.DisplayText = "";
             item.Value = ConfigSequence.Empty;
+            UpdateStateOnValueChanged(item);
+            return Unit.Value;
+        }
+
+        private Unit ClearLoadedFile(ConfigDataGridItem item)
+        {
+            item.DisplayText = "";
+            item.Value = ConfigFile.Empty;
             UpdateStateOnValueChanged(item);
             return Unit.Value;
         }
@@ -338,7 +362,7 @@ namespace LibCyStd.Wpf
             var seq = SeqModule.OfFile(fileInfo.FullName);
             var cnt = seq.Count();
 
-            _dataGrid.Dispatcher.Invoke(() =>
+            void Set()
             {
                 var cfgFile = new ConfigSequence(fileInfo, seq);
                 var cntStr = cnt.ToString("N0");
@@ -347,7 +371,8 @@ namespace LibCyStd.Wpf
                 item.Value = cfgFile;
 
                 UpdateStateOnValueChanged(item);
-            });
+            }
+            _dataGrid.Dispatcher.Invoke(Set);
 
             SetDataGridReadOnly(value: false);
             return Unit.Value;
@@ -356,15 +381,25 @@ namespace LibCyStd.Wpf
         private void DataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             var idx = _dataGrid.SelectedIndex;
-            if (idx <= -1)
+            if (idx <= -1 || idx >= _items.Count)
                 return;
             var item = _items[idx];
-            if (!item.Value.IsT3) // not a file, return
+            if (!item.Value.IsT3 && !item.Value.IsT4) // not a file, return
                 return;
+
+            Unit Handle()
+            {
+                return item.Value switch
+                {
+                    (3, _, _, _, _, _) => ClearLoadedSeq(item),
+                    (4, _, _, _, _, _) => ClearLoadedFile(item),
+                    _ => Unit.Value
+                };
+            }
 
             _ = e.ChangedButton switch
             {
-                MouseButton.Right => ClearLoadedFile(item),
+                MouseButton.Right => Handle(),
                 _ => Unit.Value
             };
         }
@@ -372,29 +407,13 @@ namespace LibCyStd.Wpf
         private void DataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             var idx = _dataGrid.SelectedIndex;
-            if (idx <= -1)
+            if (idx <= -1 || idx >= _items.Count)
                 return;
             var item = _items[idx];
             if (item.HasInvalidValue)
                 return;
-            var valOpt = item.Value switch
-            {
-                (0, int i, _, _, _) => Option.Some(i.ToString()),
-                (1, _, bool b, _, _) => Option.Some(b.ToString()),
-                (2, _, _, string s, _ ) => Option.Some(s),
-                _ => Option.None
-            };
-            if (valOpt.IsNone)
-                return;
 
-            var newValue = valOpt.Value;
-
-            _ = _iniCfg.TryGetValue<string>(item.Name) switch
-            {
-                (true, var prevValue) when prevValue != newValue => UpdateStateOnValueChanged(item),
-                _ => UpdateStateOnValueChanged(item)
-            };
-            
+            UpdateStateOnValueChanged(item);
         }
 
         private Unit LoadFileInThreadPool(FileInfo fileInfo, ConfigDataGridItem item)
@@ -406,7 +425,7 @@ namespace LibCyStd.Wpf
 
         private void DataGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
         {
-            Option<FileInfo> SelectFile(ConfigDataGridItem item)
+            Option<FileInfo> TrySelectFile(ConfigDataGridItem item)
             {
                 // cancel editing of value for config file
                 e.Cancel = true;
@@ -425,20 +444,57 @@ namespace LibCyStd.Wpf
                 item.Cell = (DataGridCell)cellInfo.Column.GetCellContent(cellInfo.Item).Parent;
             }
 
-            Unit EditConfigFile()
+            Unit EditConfigSeq()
             {
-                var result = SelectFile(item);
+                var result = TrySelectFile(item);
                 if (result.IsNone)
                     return Unit.Value;
 
                 return LoadFileInThreadPool(result.Value, item);
             }
 
-            _ = item.Value switch // if discriminated union value is ConfigFile
+            Unit EditConfigFile()
             {
-                (3, _, _, _, ConfigSequence _) => EditConfigFile(),
+                var result = TrySelectFile(item);
+                if (result.IsNone)
+                    return Unit.Value;
+
+                var fileInfo = result.Value;
+                var cfgFile = new ConfigFile(fileInfo);
+
+                item.DisplayText = fileInfo.FullName;
+                item.Value = cfgFile;
+
+                return UpdateStateOnValueChanged(item);
+            }
+
+            _ = item.Value switch // if discriminated union value is ConfigFile of Sequence
+            {
+                (3, _, _, _, ConfigSequence _, _) => EditConfigSeq(),
+                (4, _, _, _, _, ConfigFile _) => EditConfigFile(),
                 _ => Unit.Value
             };
+        }
+
+        public Option<T> TryGetValue<T>(string key)
+        {
+            var result = _items.TryFind(item => item.Name == key);
+            if (result.IsNone)
+                return Option.None;
+            var item = result.Value;
+#pragma warning disable CS8604 // Possible null reference argument.
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+            return (T)item.Value.Value;
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+#pragma warning restore CS8604 // Possible null reference argument.
+        }
+
+        public T GetValue<T>(string key)
+        {
+            var result = TryGetValue<T>(key);
+            if (result.IsNone)
+                throw new InvalidOperationException($"failed to find config value for key '{key}'.");
+            return result.Value;
         }
 
         public ConfigDataGrid(
@@ -462,10 +518,21 @@ namespace LibCyStd.Wpf
                 return Unit.Value;
             }
 
-            Unit HandleFileSeq(ConfigDataGridItem item, FileInfo f)
+            Unit HandleSeq(ConfigDataGridItem item, FileInfo f)
             {
                 if (f.Exists)
                     LoadFileInThreadPool(f, item);
+                return Unit.Value;
+            }
+
+            Unit HandleFile(ConfigDataGridItem item, FileInfo fileInfo)
+            {
+                if (!fileInfo.Exists)
+                    return Unit.Value;
+
+                var cfgFile = new ConfigFile(fileInfo);
+                item.DisplayText = fileInfo.FullName;
+                item.Value = cfgFile;
                 return Unit.Value;
             }
 
@@ -477,10 +544,11 @@ namespace LibCyStd.Wpf
                 {
                     (true, var value) => item.Value switch
                     {
-                        (0, _, _, _, _) => HandlePrimitive(item, value),
-                        (1, _, _, _, _) => HandlePrimitive(item, value),
-                        (2, _, _, _, _) => HandlePrimitive(item, value),
-                        (3, _, _, _, _) => HandleFileSeq(item, new FileInfo(value)),
+                        (0, _, _, _, _, _) => HandlePrimitive(item, value),
+                        (1, _, _, _, _, _) => HandlePrimitive(item, value),
+                        (2, _, _, _, _, _) => HandlePrimitive(item, value),
+                        (3, _, _, _, _, _ ) => HandleSeq(item, new FileInfo(value)),
+                        (4, _, _, _, _, _) => HandleFile(item, new FileInfo(value)),
                         _ => throw new InvalidOperationException("invalid ConfigValue option.")
                     },
                     _ => Unit.Value

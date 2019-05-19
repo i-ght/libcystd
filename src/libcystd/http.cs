@@ -337,8 +337,12 @@ namespace LibCyStd.Http
 
     public class StringHttpContent : HttpContent
     {
+        private readonly string _str;
+#pragma warning disable CS8618 // Non-nullable field is uninitialized.
         private StringHttpContent(in ReadOnlySpan<byte> content) : base(content) { }
-        public StringHttpContent(in string str) : this(ReadOnlySpanModule.OfString(str)) { }
+#pragma warning restore CS8618 // Non-nullable field is uninitialized.
+        public StringHttpContent(in string str) : this(ReadOnlySpanModule.OfString(str)) { _str = str; }
+        public override string ToString() => _str;
     }
 
     /// <summary>
@@ -352,8 +356,8 @@ namespace LibCyStd.Http
 
     public static class HttpVersion
     {
-        public static readonly Version Http11;
-        public static readonly Version Http2;
+        public static Version Http11 { get; }
+        public static Version Http2 { get; }
 
         static HttpVersion()
         {
@@ -383,11 +387,11 @@ namespace LibCyStd.Http
 
         private void InitDef()
         {
-            Headers = ReadOnlyCollectionModule.OfSeq(SeqModule.Empty<(string key, string val)>());
+            Headers = SeqModule.Empty<(string key, string val)>();
             ContentBody = Option.None;
             Proxy = Option.None;
             Timeout = TimeSpan.FromSeconds(30.0);
-            Cookies = new HashSet<Cookie>();
+            Cookies = SeqModule.Empty<Cookie>();
             AutoRedirect = true;
             ProxyRequired = true;
             ProtocolVersion = HttpVersion.Http11;
@@ -510,7 +514,7 @@ namespace LibCyStd.Http
 
                 fixed (char* ptr = _strMemOwner.Value.Memory.Span)
                     _s = new string(ptr, 0, ContentData.Length);
-     
+
                 return _s.Value;
             }
         }
@@ -536,13 +540,12 @@ namespace LibCyStd.Http
 
         public void Dispose()
         {
-            if (_disposed)
-                return;
+            if (_disposed) return;
+            _disposed = true;
+
             if (_strMemOwner.IsSome)
                 _strMemOwner.Value.Dispose();
             _memOwner.Dispose();
-
-            _disposed = true;
         }
 
         public override string ToString()
@@ -576,7 +579,6 @@ namespace LibCyStd.Http
 #if DEBUG
     public
 #else
-
     internal
 #endif
         class HttpStatusInfo
@@ -706,7 +708,7 @@ namespace LibCyStd.Http
                 get
                 {
                     return _contentMemeStream.Match(
-                        meme => new ReadOnlyMemory<byte>(meme.ToArray()),
+                        meme => new ReadOnlyMemory<byte>(meme.GetBuffer(), 0, (int)meme.Position),
                         _ => ReadOnlyMemory<byte>.Empty
                     );
                 }
@@ -802,7 +804,7 @@ namespace LibCyStd.Http
             {
                 _contentMemeStream = Option.None;
                 _statuses = new List<HttpStatusInfo>(1);
-                _headers = new Dictionary<string, List<string>>(8, StringComparer.OrdinalIgnoreCase);
+                _headers = new Dictionary<string, List<string>>(1, StringComparer.OrdinalIgnoreCase);
 
                 Req = req;
                 HeaderDataHandler = HandleHeaderLine;
@@ -917,7 +919,7 @@ namespace LibCyStd.Http
                     );
                 }
 
-                void SetProxy(in Proxy proxy)
+                void SetProxy(Proxy proxy)
                 {
                     CurlModule.ValidateSetOptResult(
                         libcurl.curl_easy_setopt(ez, CURLoption.PROXY, proxy.Uri.ToString())
@@ -947,13 +949,12 @@ namespace LibCyStd.Http
                     );
                 }
 
-                void SetContent(in HttpContent content)
+                void SetContent(HttpContent content)
                 {
                     var bytes = content.Content.AsArraySeg();
                     CurlModule.ValidateSetOptResult(
                         libcurl.curl_easy_setopt(ez, CURLoption.POSTFIELDSIZE, bytes.Count)
                     );
-
                     CurlModule.ValidateSetOptResult(
                         libcurl.curl_easy_setopt(ez, CURLoption.COPYPOSTFIELDS, bytes.Array)
                     );

@@ -51,7 +51,8 @@ namespace LibCyStd.Seq
         /// <param name="chooser"></param>
         /// <returns></returns>
         public static IEnumerable<TResult> Choose<T, TResult>(
-            this IEnumerable<T> seq, in Func<T, Option<TResult>> chooser)
+            this IEnumerable<T> seq, 
+            in Func<T, Option<TResult>> chooser)
         {
             return
                 seq

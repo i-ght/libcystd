@@ -24,20 +24,12 @@ namespace LibCyStd.LibCurl
 
         private static void LoadCurlErr()
         {
-#if DEBUG
-            throw new InvalidOperationException("Failed to load libcurl.dll. Is it located in application directory?");
-#else
             Environment.FailFast("Failed to load libcurl.dll. Is it located in application directory?");
-#endif
         }
 
         private static void LoadUvErr()
         {
-#if DEBUG
-            throw new InvalidOperationException("Failed to load libuv.dll. Is it located in application directory?");
-#else
-            Environment.FailFast("Failed to load libcurl.dll. Is it located in application directory?");
-#endif
+            Environment.FailFast("Failed to load libuv.dll. Is it located in application directory?");
         }
 
         static libcurl()

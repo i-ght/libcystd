@@ -188,7 +188,7 @@ namespace LibCyStd.Net
         {
         }
 
-        public Proxy(in Uri uri) : this(uri, Option.None)
+        public Proxy(Uri uri) : this(uri, Option.None)
         {
         }
 
@@ -197,7 +197,7 @@ namespace LibCyStd.Net
             return Uri.ToString();
         }
 
-        public static Option<Proxy> TryParse(in string input)
+        public static Option<Proxy> TryParse(string input)
         {
             if (!Uri.TryCreate(input, UriKind.Absolute, out var u)
                 && !Uri.TryCreate($"http://{input}", UriKind.Absolute, out u))
