@@ -42,13 +42,13 @@ namespace LibCyStd
 
         public (bool success, TValue value) TryGetValue() => _value.IsT0 ? (true, _value.T0Value) : ((bool success, TValue value))(false, default!);
 
-        public Option(in TValue value)
+        public Option(TValue value)
         {
             _value = value;
             _initialized = true;
         }
 
-        public Option(in None none)
+        public Option(None none)
         {
             _value = none;
             _initialized = true;
@@ -95,19 +95,16 @@ namespace LibCyStd
             return _value.IsT0 ? $"Some {_value.T0Value}" : "None";
         }
 
-        public static implicit operator Option<TValue>(in TValue value) => new Option<TValue>(value);
-        public static implicit operator Option<TValue>(in None none) => new Option<TValue>(none);
+        public static implicit operator Option<TValue>(TValue value) => new Option<TValue>(value);
+        public static implicit operator Option<TValue>(None none) => new Option<TValue>(none);
     }
 
     public static class Option
     {
-        public static bool IsSome<TValue>(in Option<TValue> option) => option.IsSome;
-        public static bool IsSome<TValue>(Option<TValue> option) => IsSome(in option);
-        public static bool IsNone<TValue>(in Option<TValue> option) => option.IsNone;
-        public static bool IsNone<TValue>(Option<TValue> option) => IsNone(in option);
-        public static TValue Value<TValue>(in Option<TValue> option) => option.Value;
-        public static TValue Value<TValue>(Option<TValue> option) => Value(in option);
-        public static Option<TValue> Some<TValue>(in TValue value) => new Option<TValue>(value);
+        public static bool IsSome<TValue>(Option<TValue> option) => option.IsSome;
+        public static bool IsNone<TValue>(Option<TValue> option) => option.IsNone;
+        public static TValue Value<TValue>(Option<TValue> option) => option.Value;
+        public static Option<TValue> Some<TValue>(TValue value) => new Option<TValue>(value);
 
         public static None None { get; }
 
@@ -126,10 +123,9 @@ namespace LibCyStd
     /// </summary>
     public static class DisposableModule
     {
-        public static void Dispose(in IDisposable d) => d.Dispose();
-        public static void Dispose(IDisposable d) => Dispose(in d);
+        public static void Dispose(IDisposable d) => d.Dispose();
 
-        public static void DisposeSeq(in IEnumerable<IDisposable> disposables) =>
+        public static void DisposeSeq(IEnumerable<IDisposable> disposables) =>
             disposables.Iter(Dispose);
     }
 
@@ -167,12 +163,10 @@ namespace LibCyStd
         /// <typeparam name="T"></typeparam>
         /// <param name="value"></param>
         /// <returns></returns>
-        public static T Id<T>(in T value) => value;
-        public static T Id<T>(T value) => Id(in value);
+        public static T Id<T>(T value) => value;
 
-        public static string ToString<T>(in T obj) => obj!.ToString();
+        public static string ToString<T>(T obj) => obj!.ToString();
 
-        public static string ToString<T>(T obj) => ToString(in obj);
     }
 
     /// <summary>
@@ -184,17 +178,17 @@ namespace LibCyStd
         /// throws a new <see cref="InvalidOperationException"/>.
         /// </summary>
         /// <param name="message"></param>
-        public static Unit InvalidOp(in string message)
+        public static Unit InvalidOp(string message)
         {
             throw new InvalidOperationException(message);
         }
 
-        public static Unit ObjDisposed(in object o)
+        public static Unit ObjDisposed(object o)
         {
             throw new ObjectDisposedException(o.GetType().Name);
         }
 
-        public static Unit ObjDisposed(in string objectName)
+        public static Unit ObjDisposed(string objectName)
         {
             throw new ObjectDisposedException(objectName);
         }
@@ -204,7 +198,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="inner"></param>
-        public static Unit InvalidOp(in string message, in Exception inner)
+        public static Unit InvalidOp(string message, Exception inner)
         {
             throw new InvalidOperationException(message, inner);
         }
@@ -214,7 +208,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="paramName"></param>
-        public static Unit InvalidArg(in string message, in string paramName)
+        public static Unit InvalidArg(string message, string paramName)
         {
             throw new ArgumentException(message, paramName);
         }
@@ -223,7 +217,7 @@ namespace LibCyStd
         /// throws a new <see cref="ArgumentNullException"/>.
         /// </summary>
         /// <param name="paramName"></param>
-        public static Unit NullArg(in string paramName)
+        public static Unit NullArg(string paramName)
         {
             throw new ArgumentNullException(paramName);
         }
@@ -232,7 +226,7 @@ namespace LibCyStd
         /// Throws a new <see cref="TimeoutException"/>.
         /// </summary>
         /// <param name="message"></param>
-        public static Unit Timeout(in string message)
+        public static Unit Timeout(string message)
         {
             throw new TimeoutException(message);
         }
@@ -242,7 +236,7 @@ namespace LibCyStd
         /// </summary>
         /// <param name="message"></param>
         /// <param name="inner"></param>
-        public static Unit Timeout(in string message, in Exception inner)
+        public static Unit Timeout(string message, Exception inner)
         {
             throw new TimeoutException(message, inner);
         }
@@ -251,7 +245,7 @@ namespace LibCyStd
         /// Reraises <see cref="Exception"/> with stack trace intact.
         /// </summary>
         /// <param name="e"></param>
-        public static Unit Reraise(in Exception e)
+        public static Unit Reraise(Exception e)
         {
             ExceptionDispatchInfo.Capture(e).Throw();
             return Unit.Value;
@@ -306,7 +300,7 @@ namespace LibCyStd
             Rng = new RNGCryptoServiceProvider();
         }
 
-        public static int CryptoNext(in int min, in int max)
+        public static int CryptoNext(int min, int max)
         {
             using var memOwner = MemoryPool<byte>.Shared.Rent(4);
             ReadOnlyMemory<byte> mem = memOwner.Memory;
@@ -317,19 +311,19 @@ namespace LibCyStd
             return (int)(min + ((max - min) * (scale / (uint.MaxValue + 1.0))));
         }
 
-        public static int Next(in int min, in int max)
+        public static int Next(int min, int max)
         {
             lock (Rand)
                 return Rand.Next(min, max);
         }
 
-        public static int Next(in int max)
+        public static int Next(int max)
         {
             lock (Rand)
                 return Rand.Next(max);
         }
 
-        public static Span<byte> NextBytes(in int len)
+        public static Span<byte> NextBytes(int len)
         {
             var bytes = new byte[len];
             lock (Rand)
@@ -346,7 +340,7 @@ namespace LibCyStd
         public static DateTimeOffset Epoch { get; }
         public static TimeZoneInfo UsEast { get; }
         public static TimeZoneInfo UsCentral { get; }
-        public static TimeZoneInfo UsMountain { get; }
+        public static TimeZoneInfo UsMounta{ get; }
         public static TimeZoneInfo UsWest { get; }
 
         static DateTimeOffsetModule()
@@ -354,25 +348,25 @@ namespace LibCyStd
             Epoch = new DateTimeOffset(new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc));
             UsEast = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
             UsCentral = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-            UsMountain = TimeZoneInfo.FindSystemTimeZoneById("Mountain Standard Time");
+            UsMounta= TimeZoneInfo.FindSystemTimeZoneById("MountaStandard Time");
             UsWest = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
         }
 
-        public static TimeSpan UnixTimeSpan(in DateTimeOffset input) => input - Epoch;
+        public static TimeSpan UnixTimeSpan(DateTimeOffset input) => input - Epoch;
 
         public static long UnixMillis() => (long)UnixTimeSpan(DateTimeOffset.Now).TotalMilliseconds;
 
         public static long UnixSeconds() => (long)UnixTimeSpan(DateTimeOffset.Now).TotalSeconds;
 
-        public static DateTimeOffset DateTimeInTimeZone(in DateTimeOffset dt, in TimeZoneInfo tzInfo)
+        public static DateTimeOffset DateTimeInTimeZone(DateTimeOffset dt, TimeZoneInfo tzInfo)
             => TimeZoneInfo.ConvertTime(dt, tzInfo);
     }
 
     public static class ReadOnlySpanModule
     {
-        public static ReadOnlySpan<byte> OfString(in string s) => Encoding.UTF8.GetBytes(s);
+        public static ReadOnlySpan<byte> OfString(string s) => Encoding.UTF8.GetBytes(s);
 
-        public static ReadOnlySpan<T> OfSeq<T>(in IEnumerable<T> seq) => ArrayModule.OfSeq(seq);
+        public static ReadOnlySpan<T> OfSeq<T>(IEnumerable<T> seq) => ArrayModule.OfSeq(seq);
 
         public static string ToHex(this in ReadOnlySpan<byte> bytes)
         {
@@ -387,12 +381,12 @@ namespace LibCyStd
 
     public static class SpanModule
     {
-        public static string ToHex(this in Span<byte> bytes) => ReadOnlySpanModule.ToHex(bytes);
+        public static string ToHex(this Span<byte> bytes) => ReadOnlySpanModule.ToHex(bytes);
     }
 
     public static class MemoryOwnerModule
     {
-        public static IMemoryOwner<byte> OfString(in string s)
+        public static IMemoryOwner<byte> OfString(string s)
         {
             var buffer = MemoryPool<byte>.Shared.Rent(s.Length);
             Span<byte> bytes = Encoding.UTF8.GetBytes(s);
@@ -550,7 +544,7 @@ namespace LibCyStd
 
         public static string ToHex(this in ReadOnlyMemory<byte> bytes) => bytes.Span.ToHex();
 
-        public static ReadOnlyMemory<byte> OfHex(in string hex)
+        public static ReadOnlyMemory<byte> OfHex(string hex)
         {
             var h = Regex.Replace(hex, @"\s+", "");
             return
@@ -560,9 +554,9 @@ namespace LibCyStd
                 .ToArray();
         }
 
-        public static ReadOnlyMemory<byte> OfString(in string s) => Encoding.UTF8.GetBytes(s);
+        public static ReadOnlyMemory<byte> OfString(string s) => Encoding.UTF8.GetBytes(s);
 
-        public static ReadOnlyMemory<T> OfSeq<T>(in IEnumerable<T> seq) => ArrayModule.OfSeq(seq);
+        public static ReadOnlyMemory<T> OfSeq<T>(IEnumerable<T> seq) => ArrayModule.OfSeq(seq);
 
         public static (bool success, ArraySegment<T> arrSeg) TryGetArraySegment<T>(this in ReadOnlyMemory<T> memory)
             => MemoryMarshal.TryGetArray(memory, out var segment) ? (true, segment) : (false, segment);
@@ -571,7 +565,7 @@ namespace LibCyStd
         {
             var (success, seg) = TryGetArraySegment(memory);
             if (!success)
-                ExnModule.InvalidOp("memory did not contain array");
+                ExnModule.InvalidOp("memory did not contaarray");
             return seg;
         }
 
@@ -581,7 +575,7 @@ namespace LibCyStd
             return Convert.ToBase64String(arraySeg.Array, arraySeg.Offset, arraySeg.Count);
         }
 
-        public static ReadOnlyMemory<byte> OfBase64EncodedString(in string input)
+        public static ReadOnlyMemory<byte> OfBase64EncodedString(string input)
             => Convert.FromBase64String(input);
     }
 
@@ -616,16 +610,15 @@ namespace LibCyStd
             return sb.ToString();
         }
 
-        public static string[] SplitRemoveEmpty(this string input, in char delimter)
+        public static string[] SplitRemoveEmpty(this string input, char delimter)
             => input.Split(new[] { delimter }, StringSplitOptions.RemoveEmptyEntries);
 
-        public static string[] SplitRemoveEmpty(this string input, in string delimter)
+        public static string[] SplitRemoveEmpty(this string input, string delimter)
             => input.Split(delimter.ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 
-        public static string Trim(in string input) => input.Trim();
-        public static string Trim(string input) => Trim(in input);
+        public static string Trim(string input) => input.Trim();
 
-        public static Option<(string key, string val)> TryParseKvp(in string input, in string delimter)
+        public static Option<(string key, string val)> TryParseKvp(string input, string delimter)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return Option.None;
@@ -634,7 +627,7 @@ namespace LibCyStd
             return sp.Length != 2 ? (Option<(string key, string val)>)Option.None : (Option<(string key, string val)>)(sp[0], sp[1]);
         }
 
-        public static Option<(string key, string val)> TryParseKvp(in string input, in char delimter)
+        public static Option<(string key, string val)> TryParseKvp(string input, char delimter)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return Option.None;
@@ -643,7 +636,7 @@ namespace LibCyStd
             return sp.Length != 2 ? (Option<(string key, string val)>)Option.None : (Option<(string key, string val)>)(sp[0], sp[1]);
         }
 
-        public static unsafe string OfSpan(in ReadOnlySpan<byte> bytes)
+        public static unsafe string OfSpan(ReadOnlySpan<byte> bytes)
         {
             fixed (byte* b = bytes)
                 return Encoding.UTF8.GetString(b, bytes.Length);
@@ -651,22 +644,22 @@ namespace LibCyStd
 
         public static string OfMemory(in ReadOnlyMemory<byte> bytes) => OfSpan(bytes.Span);
 
-        public static bool InvariantEquals(this string str1, in string str2) =>
+        public static bool InvariantEquals(this string str1, string str2) =>
             string.Equals(str1, str2, StringComparison.OrdinalIgnoreCase);
 
-        public static bool InvariantStartsWith(this string input, in string value) =>
+        public static bool InvariantStartsWith(this string input, string value) =>
             input.StartsWith(value, StringComparison.OrdinalIgnoreCase);
 
-        public static bool InvariantEndsWith(this string input, in string value) =>
+        public static bool InvariantEndsWith(this string input, string value) =>
             input.EndsWith(value, StringComparison.OrdinalIgnoreCase);
 
-        public static bool InvariantContains(this string input, in string value) =>
+        public static bool InvariantContains(this string input, string value) =>
             input.IndexOf(value, StringComparison.OrdinalIgnoreCase) > -1;
 
-        public static bool AllNotEmptyOrWhiteSpace(in IEnumerable<string> strings) =>
+        public static bool AllNotEmptyOrWhiteSpace(IEnumerable<string> strings) =>
             strings.All(s => !string.IsNullOrWhiteSpace(s));
 
-        public static bool AnyEmptyOrWhiteSpace(in IEnumerable<string> strings) =>
+        public static bool AnyEmptyOrWhiteSpace(IEnumerable<string> strings) =>
             strings.Any(string.IsNullOrWhiteSpace);
     }
 
@@ -680,11 +673,11 @@ namespace LibCyStd
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static Option<WebProxy> TryParse(in string input)
+        public static Option<WebProxy> TryParse(string input)
         {
             var sp = input.SplitRemoveEmpty(':');
 
-            Option<WebProxy> TryParse2(in string _input)
+            Option<WebProxy> TryParse2(string _input)
             {
                 try { return new WebProxy(_input); }
                 catch (Exception e) when (e is ArgumentException || e is UriFormatException)

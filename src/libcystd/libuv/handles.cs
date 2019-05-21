@@ -17,7 +17,7 @@ namespace LibCyStd.LibUv
     {
         public IntPtr LoopPtr { get; }
 
-        public InitTimerArgs(in IntPtr loopPtr)
+        public InitTimerArgs(IntPtr loopPtr)
         {
             LoopPtr = loopPtr;
         }
@@ -28,7 +28,7 @@ namespace LibCyStd.LibUv
         public IntPtr LoopPtr { get; }
         public IntPtr Fd { get; }
 
-        public InitPollArgs(in IntPtr loopPtr, in IntPtr fd)
+        public InitPollArgs(IntPtr loopPtr, IntPtr fd)
         {
             LoopPtr = loopPtr;
             Fd = fd;
@@ -51,7 +51,7 @@ namespace LibCyStd.LibUv
     {
         public IntPtr LoopPtr { get; }
 
-        public InitTcpArgs(in IntPtr loopPtr)
+        public InitTcpArgs(IntPtr loopPtr)
         {
             LoopPtr = loopPtr;
         }
@@ -64,9 +64,9 @@ namespace LibCyStd.LibUv
         public UvInitFunction Init { get; }
 
         public UvInitializer(
-            in string cFunctionName,
-            in UvInitArgs args,
-            in UvInitFunction init)
+            string cFunctionName,
+            UvInitArgs args,
+            UvInitFunction init)
         {
             CFunctionName = cFunctionName;
             Args = args;
@@ -101,7 +101,7 @@ namespace LibCyStd.LibUv
 
         private uv_err_code InitUvObj(
             UvInitArgs argsUnion,
-            in UvInitFunction initFnUnion)
+            UvInitFunction initFnUnion)
         {
             return initFnUnion.Match(
                 initLoop => initLoop(Handle),
@@ -133,7 +133,7 @@ namespace LibCyStd.LibUv
 
         public override string ToString() => $"libuv.{GetType().Name}@{Handle}";
 
-        protected virtual void Dispose(in bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
             if (disposing) { }
@@ -148,8 +148,8 @@ namespace LibCyStd.LibUv
         }
 
         protected UvMemory(
-            in int size,
-            in UvInitializer uvInit)
+            int size,
+            UvInitializer uvInit)
         {
             Handle = Marshal.AllocCoTaskMem(size);
             try { InitMem(uvInit); }
@@ -158,7 +158,7 @@ namespace LibCyStd.LibUv
 
         ~UvMemory() => Dispose(false);
 
-        public static implicit operator IntPtr(in UvMemory mem)
+        public static implicit operator IntPtr(UvMemory mem)
         {
             if (mem._disposed) ExnModule.ObjDisposed(mem.GetType().Name);
             return mem.Handle;
@@ -173,7 +173,7 @@ namespace LibCyStd.LibUv
 
         public uv_err_code Close() => libuv.uv_loop_close(Handle);
 
-        protected override void Dispose(in bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
             if (disposing) { }
@@ -221,7 +221,7 @@ namespace LibCyStd.LibUv
             Dispose();
         }
 
-        protected override void Dispose(in bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
             if (disposing) { }
@@ -232,9 +232,9 @@ namespace LibCyStd.LibUv
         public override string ToString() => $"{HandleType}@{Handle}";
 
         protected unsafe UvHandle(
-            in uv_handle_type handleType,
-            in UvLoop loop,
-            in UvInitializer uvInit) : base(libuv.uv_handle_size(handleType), uvInit)
+            uv_handle_type handleType,
+            UvLoop loop,
+            UvInitializer uvInit) : base(libuv.uv_handle_size(handleType), uvInit)
         {
             HandleType = handleType;
             Loop = loop;
@@ -262,7 +262,7 @@ namespace LibCyStd.LibUv
 
         private Option<Action<UvTimer>> _cb;
 
-        public UvTimer(in UvLoop loop) : base(uv_handle_type.UV_TIMER, loop, new UvInitializer("uv_timer_init", new InitTimerArgs(loop), uv_timer_init)) { }
+        public UvTimer(UvLoop loop) : base(uv_handle_type.UV_TIMER, loop, new UvInitializer("uv_timer_init", new InitTimerArgs(loop), uv_timer_init)) { }
 
         public void Start(Action<UvTimer> callback, long timeout, long repeat)
         {
@@ -299,12 +299,12 @@ namespace LibCyStd.LibUv
 
         private Option<Action<UvPoll, int, int>> _cb;
 
-        public UvPoll(in UvLoop loop, in IntPtr fd) : base(uv_handle_type.UV_POLL, loop, new UvInitializer("uv_poll_init", new InitPollArgs(loop, fd), uv_poll_init_socket))
+        public UvPoll(UvLoop loop, IntPtr fd) : base(uv_handle_type.UV_POLL, loop, new UvInitializer("uv_poll_init", new InitPollArgs(loop, fd), uv_poll_init_socket))
             => _cb = Option.None;
 
         public void Start(
-            in uv_poll_event eventMask,
-            in Action<UvPoll, int, int> callback)
+            uv_poll_event eventMask,
+            Action<UvPoll, int, int> callback)
         {
             _cb = callback;
             UvModule.ValidateResult("uv_poll_start", libuv.uv_poll_start(Handle, (int)eventMask, Cb));
@@ -329,7 +329,7 @@ namespace LibCyStd.LibUv
 
         public void Send() => UvModule.ValidateResult("uv_async_send", libuv.uv_async_send(Handle));
 
-        public UvAsync(in UvLoop loop, in Action<UvAsync> cb) : base(uv_handle_type.UV_ASYNC, loop, new UvInitializer("uv_async_init", new InitAsyncArgs(loop, Cb), uv_async_init)) => _cb = cb;
+        public UvAsync(UvLoop loop, Action<UvAsync> cb) : base(uv_handle_type.UV_ASYNC, loop, new UvInitializer("uv_async_init", new InitAsyncArgs(loop, Cb), uv_async_init)) => _cb = cb;
     }
 
     public class UvTcp : UvHandle
@@ -348,6 +348,6 @@ namespace LibCyStd.LibUv
             }
         }
 
-        public UvTcp(in UvLoop loop) : base(uv_handle_type.UV_TCP, loop, new UvInitializer("uv_tcp_init", new InitTcpArgs(loop), uv_tcp_init)) { }
+        public UvTcp(UvLoop loop) : base(uv_handle_type.UV_TCP, loop, new UvInitializer("uv_tcp_init", new InitTcpArgs(loop), uv_tcp_init)) { }
     }
 }

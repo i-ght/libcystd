@@ -33,9 +33,9 @@ namespace LibCyStd.LibCurl
         public Func<CurlEzHandle, TReqState, CURLcode, ReqOpCompletedAction> HandleResp { get; }
 
         public ReqCtx(
-            in TReqState reqState,
-            in Action<CurlEzHandle, TReqState> configureEzReq,
-            in Func<CurlEzHandle, TReqState, CURLcode, ReqOpCompletedAction> handleResp)
+            TReqState reqState,
+            Action<CurlEzHandle, TReqState> configureEzReq,
+            Func<CurlEzHandle, TReqState, CURLcode, ReqOpCompletedAction> handleResp)
         {
             ReqState = reqState;
             ConfigureEzReq = configureEzReq;
@@ -48,12 +48,12 @@ namespace LibCyStd.LibCurl
         public CurlMultiHandle MultiHandle { get; }
         public libcurl.socket_callback SocketCallback { get; }
         public libcurl.timer_callback TimerCallback { get; }
-        public ConcurrentDictionary<IntPtr, ReqCtx<TReqState>> ActiveEzHandles { get; }
-        public ConcurrentQueue<CurlEzHandle> InactiveEzHandles { get; }
+        public Dictionary<IntPtr, ReqCtx<TReqState>> ActiveEzHandles { get; }
+        public Queue<CurlEzHandle> InactiveEzHandles { get; }
         public ReadOnlyDictionary<IntPtr, CurlEzHandle> EzPool { get; }
-        public ConcurrentDictionary<IntPtr, UvPoll> Sockets { get; }
-        public ConcurrentQueue<ReqCtx<TReqState>> PendingRequests { get; }
-        public ConcurrentQueue<CurlEzHandle> EzsToAdd { get; }
+        public Dictionary<IntPtr, UvPoll> Sockets { get; }
+        public Queue<ReqCtx<TReqState>> PendingRequests { get; }
+        public Queue<CurlEzHandle> EzsToAdd { get; }
         public UvLoop Loop { get; set; }
         public UvTimer Timer { get; set; }
         public UvAsync MultiAdd { get; set; }
@@ -62,15 +62,15 @@ namespace LibCyStd.LibCurl
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
         public CurlMultiAgentState(
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
-            in CurlMultiHandle multiHandle,
-            in libcurl.timer_callback timerCallback,
-            in libcurl.socket_callback socketCallback,
-            in ConcurrentDictionary<IntPtr, ReqCtx<TReqState>> activeEzHandles,
-            in ConcurrentQueue<CurlEzHandle> inactiveEzHandles,
-            in ReadOnlyDictionary<IntPtr, CurlEzHandle> ezPool,
-            in ConcurrentDictionary<IntPtr, UvPoll> sockets,
-            in ConcurrentQueue<ReqCtx<TReqState>> pendingReq,
-            in ConcurrentQueue<CurlEzHandle> ezsToAdd)
+            CurlMultiHandle multiHandle,
+            libcurl.timer_callback timerCallback,
+            libcurl.socket_callback socketCallback,
+            Dictionary<IntPtr, ReqCtx<TReqState>> activeEzHandles,
+            Queue<CurlEzHandle> inactiveEzHandles,
+            ReadOnlyDictionary<IntPtr, CurlEzHandle> ezPool,
+            Dictionary<IntPtr, UvPoll> sockets,
+            Queue<ReqCtx<TReqState>> pendingReq,
+            Queue<CurlEzHandle> ezsToAdd)
         {
             MultiHandle = multiHandle;
             TimerCallback = timerCallback;
@@ -101,7 +101,7 @@ namespace LibCyStd.LibCurl
 
         public void ExecReq(ReqCtx<TReqState> reqCtx)
         {
-            // called when all easy handles are currently in use.
+            // called when all easy handles are currently use.
             Unit Enqueue()
             {
                 _state.PendingRequests.Enqueue(reqCtx);
@@ -109,25 +109,27 @@ namespace LibCyStd.LibCurl
             }
 
             //enqueue the easy handle, and send it to the uv event loop by using uv_async.
-            Unit Send(in CurlEzHandle easy)
+            Unit Send(CurlEzHandle easy)
             {
                 reqCtx.ConfigureEzReq(easy, reqCtx.ReqState);
-
-                if (!_state.ActiveEzHandles.ContainsKey(easy))
-                    _state.ActiveEzHandles.TryAdd(easy, reqCtx);
-                else
-                    _state.ActiveEzHandles[easy] = reqCtx;
-
+                _state.ActiveEzHandles[easy] = reqCtx;
                 _state.EzsToAdd.Enqueue(easy);
                 _state.MultiAdd.Send();
                 return Unit.Value;
             }
 
-            _ = _state.InactiveEzHandles.TryDequeue(out var easy) switch
+            lock (_state)
             {
-                true => Send(easy),
-                false => Enqueue()
-            };
+                if ( _state.InactiveEzHandles.Count > 0)
+                {
+                    var ez = _state.InactiveEzHandles.Dequeue();
+                    Send(ez);
+                }
+                else
+                {
+                    Enqueue();
+                }
+            }
         }
 
         /// <summary>
@@ -152,7 +154,7 @@ namespace LibCyStd.LibCurl
             return 0;
         }
 
-        private static void EzClearCookies(in CurlEzHandle easy)
+        private static void EzClearCookies(CurlEzHandle easy)
         {
             var result = libcurl.curl_easy_setopt(easy, CURLoption.COOKIELIST, "ALL");
             _ = result switch
@@ -194,10 +196,20 @@ namespace LibCyStd.LibCurl
                     );
                     EzClearCookies(easy);
                     libcurl.curl_easy_reset(easy);
-                    _state.ActiveEzHandles.TryRemove(easy, out _);
-                    _state.InactiveEzHandles.Enqueue(easy);
-                    if (_state.PendingRequests.TryDequeue(out reqCtx))
-                        ExecReq(reqCtx);
+
+                    Option<ReqCtx<TReqState>> next = Option.None;
+
+                    lock (_state)
+                    {
+                        _state.ActiveEzHandles.Remove(easy);
+                        _state.InactiveEzHandles.Enqueue(easy);
+                        if (_state.PendingRequests.Count > 0)
+                            next = _state.PendingRequests.Dequeue();
+                    }
+
+                    if (next.IsSome)
+                        ExecReq(next.Value);
+
                     return Unit.Value;
                 }
 
@@ -210,7 +222,7 @@ namespace LibCyStd.LibCurl
             }
         }
 
-        //private void EndPoll(in PollStatus status, in IntPtr sockfd)
+        //private void EndPoll(PollStatus status, IntPtr sockfd)
         //{
         //    CURLcselect flags = 0;
 
@@ -227,7 +239,7 @@ namespace LibCyStd.LibCurl
         //    CheckMultiInfo();
         //}
 
-        private void BeginPoll(in CURLpoll what, IntPtr sockfd)
+        private void BeginPoll(CURLpoll what, IntPtr sockfd)
         {
             uv_poll_event events = 0;
 
@@ -239,8 +251,8 @@ namespace LibCyStd.LibCurl
 
             if (!_state.Sockets.TryGetValue(sockfd, out var poll))
             {
-                poll = new UvPoll(_state.Loop, sockfd);/*_state.Loop.CreatePoll(sockfd);*/
-                _state.Sockets.TryAdd(sockfd, poll);
+                poll = new UvPoll(_state.Loop, sockfd);
+                _state.Sockets.Add(sockfd, poll);
             }
 
             void PollCb(UvPoll _, int status, int events)
@@ -280,7 +292,7 @@ namespace LibCyStd.LibCurl
             var poll = _state.Sockets[sockfd];
             poll.Stop();
             poll.Dispose();
-            _state.Sockets.TryRemove(sockfd, out _);
+            _state.Sockets.Remove(sockfd);
         }
 
         /// <summary>
@@ -314,15 +326,19 @@ namespace LibCyStd.LibCurl
 
         private void AddHandle(UvAsync _)
         {
-            while (_state.EzsToAdd.TryDequeue(out var ez))
+            lock (_state)
             {
-                CurlModule.ValidateMultiResult(
-                    libcurl.curl_multi_add_handle(_state.MultiHandle, ez)
-                );
+                while (_state.EzsToAdd.Count > 0)
+                {
+                    var ez = _state.EzsToAdd.Dequeue();
+                    CurlModule.ValidateMultiResult(
+                        libcurl.curl_multi_add_handle(_state.MultiHandle, ez)
+                    );
+                }
             }
         }
 
-        private void Dispose(UvAsync _)
+        private void Dispose(UvAsync __)
         {
             foreach (var ez in _state.EzPool.Values)
             {
@@ -384,12 +400,12 @@ namespace LibCyStd.LibCurl
             _disposeEvent.Dispose();
         }
 
-        public CurlMultiAgent(in int ezPoolSize)
+        public CurlMultiAgent(int ezPoolSize)
         {
             _disposeEvent = new ManualResetEventSlim();
             var multiHandle = libcurl.curl_multi_init();
-            var activeEzHandles = new ConcurrentDictionary<IntPtr, ReqCtx<TReqState>>();
-            var inactiveEzHandles = new ConcurrentQueue<CurlEzHandle>();
+            var activeEzHandles = new Dictionary<IntPtr, ReqCtx<TReqState>>();
+            var inactiveEzHandles = new Queue<CurlEzHandle>();
             var handsUp = new Dictionary<IntPtr, CurlEzHandle>();
 
             for (var i = 0; i < ezPoolSize; i++)
@@ -400,9 +416,9 @@ namespace LibCyStd.LibCurl
             }
 
             var pool = new ReadOnlyDictionary<IntPtr, CurlEzHandle>(handsUp);
-            var sockets = new ConcurrentDictionary<IntPtr, UvPoll>();
-            var pending = new ConcurrentQueue<ReqCtx<TReqState>>();
-            var ezsToAdd = new ConcurrentQueue<CurlEzHandle>();
+            var sockets = new Dictionary<IntPtr, UvPoll>();
+            var pending = new Queue<ReqCtx<TReqState>>();
+            var ezsToAdd = new Queue<CurlEzHandle>();
 
             _state = new CurlMultiAgentState<TReqState>(
                 multiHandle,

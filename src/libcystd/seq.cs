@@ -28,22 +28,14 @@ namespace LibCyStd.Seq
         /// <typeparam name="T"></typeparam>
         /// <param name="seq"></param>
         /// <param name="action"></param>
-        public static void Iter<T>(this IEnumerable<T> seq, in Action<T> action)
+        public static void Iter<T>(this IEnumerable<T> seq, Action<T> action)
         {
             foreach (var value in seq)
                 action(value);
         }
 
         /// <summary>
-        /// For each function
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="seq"></param>
-        /// <param name="action"></param>
-        public static void Iter<T>(this IEnumerable<T> seq, Action<T> action) => Iter(seq, in action);
-
-        /// <summary>
-        /// Applies chooser to each item in the sequence. If chooser returns Some, item is added to result. If chooser returns None, item is discarded.
+        /// Applies chooser to each item the sequence. If chooser returns Some, item is added to result. If chooser returns None, item is discarded.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <typeparam name="TResult"></typeparam>
@@ -52,7 +44,7 @@ namespace LibCyStd.Seq
         /// <returns></returns>
         public static IEnumerable<TResult> Choose<T, TResult>(
             this IEnumerable<T> seq, 
-            in Func<T, Option<TResult>> chooser)
+            Func<T, Option<TResult>> chooser)
         {
             return
                 seq
@@ -61,10 +53,10 @@ namespace LibCyStd.Seq
                 .Select(Option.Value);
         }
 
-        public static IEnumerable<string> OfFile(in string path)
+        public static IEnumerable<string> OfFile(string path)
             => File.ReadLines(path);
 
-        public static Option<T> TryFind<T>(this IEnumerable<T> seq, in Func<T, bool> predicate)
+        public static Option<T> TryFind<T>(this IEnumerable<T> seq, Func<T, bool> predicate)
         {
             foreach (var item in seq)
             {
@@ -87,7 +79,7 @@ namespace LibCyStd.Seq
         /// <typeparam name="T"></typeparam>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static List<T> OfSeq<T>(in IEnumerable<T> sequence)
+        public static List<T> OfSeq<T>(IEnumerable<T> sequence)
         {
             return sequence is List<T> list ? list : sequence.ToList();
         }
@@ -98,7 +90,7 @@ namespace LibCyStd.Seq
     /// </summary>
     public static class ReadOnlyCollectionModule
     {
-        public static ReadOnlyCollection<T> OfSeq<T>(in IEnumerable<T> sequence)
+        public static ReadOnlyCollection<T> OfSeq<T>(IEnumerable<T> sequence)
         {
             return sequence is ReadOnlyCollection<T> r ? r : new ReadOnlyCollection<T>(ListModule.OfSeq(sequence));
         }
@@ -118,8 +110,8 @@ namespace LibCyStd.Seq
         /// <param name="equalityComparer"></param>
         /// <returns></returns>
         public static Dictionary<TKey, TValue> OfSeq<TKey, TValue>(
-            in IEnumerable<(TKey, TValue)> sequence,
-            in IEqualityComparer<TKey> equalityComparer)
+            IEnumerable<(TKey, TValue)> sequence,
+            IEqualityComparer<TKey> equalityComparer)
         {
             var d = new Dictionary<TKey, TValue>(sequence.Len(), equalityComparer);
             foreach (var (key, value) in sequence)
@@ -128,7 +120,7 @@ namespace LibCyStd.Seq
         }
 
         public static Dictionary<TKey, TValue> OfSeq<TKey, TValue>(
-            in IEnumerable<(TKey, TValue)> sequence)
+            IEnumerable<(TKey, TValue)> sequence)
         {
             return OfSeq(sequence, EqualityComparer<TKey>.Default);
         }
@@ -151,7 +143,7 @@ namespace LibCyStd.Seq
 
         public static Option<TValue> TryGet<TKey, TValue>(
             this IDictionary<TKey, TValue> dict,
-            in TKey key)
+            TKey key)
         {
             return dict.TryGetValue(key, out var value) ? new Option<TValue>(value) : Option.None;
         }
@@ -171,21 +163,21 @@ namespace LibCyStd.Seq
         /// <param name="equalityComparer"></param>
         /// <returns></returns>
         public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
-            in IEnumerable<(TKey, TValue)> sequence,
-            in IEqualityComparer<TKey> equalityComparer
+            IEnumerable<(TKey, TValue)> sequence,
+            IEqualityComparer<TKey> equalityComparer
         ) => new ReadOnlyDictionary<TKey, TValue>(DictModule.OfSeq(sequence, equalityComparer));
 
         public static ReadOnlyDictionary<TKey, TValue> OfSeq<TKey, TValue>(
-            in IEnumerable<(TKey, TValue)> sequence
+            IEnumerable<(TKey, TValue)> sequence
         ) => OfSeq(sequence, EqualityComparer<TKey>.Default);
 
         public static ReadOnlyDictionary<TKey, TValue> OfDict<TKey, TValue>(
-            in IDictionary<TKey, TValue> d
+            IDictionary<TKey, TValue> d
         ) => new ReadOnlyDictionary<TKey, TValue>(d);
 
         public static Option<TValue> TryGetValue<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dict,
-            in TKey key)
+            TKey key)
         {
             return dict.TryGetValue(key, out TValue value) ? new Option<TValue>(value) : Option.None;
         }
@@ -203,7 +195,7 @@ namespace LibCyStd.Seq
             return item;
         }
 
-        public static Queue<T> OfSeq<T>(in IEnumerable<T> seq) => new Queue<T>(seq);
+        public static Queue<T> OfSeq<T>(IEnumerable<T> seq) => new Queue<T>(seq);
 
         public static void Shuffle<T>(this Queue<T> queue)
         {
@@ -261,7 +253,7 @@ namespace LibCyStd.Seq
         /// <typeparam name="T"></typeparam>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static T[] OfSeq<T>(in IEnumerable<T> sequence)
+        public static T[] OfSeq<T>(IEnumerable<T> sequence)
         {
             return sequence is T[] array ? array : sequence.ToArray();
         }

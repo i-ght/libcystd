@@ -8,11 +8,11 @@ namespace LibCyStd.LibUv
         {
         }
 
-        public UvException(in string message) : base(message)
+        public UvException(string message) : base(message)
         {
         }
 
-        public UvException(in string message, in Exception innerException) : base(message, innerException)
+        public UvException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }

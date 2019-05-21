@@ -16,7 +16,7 @@ namespace LibCyStd.LibCurl
 
         protected abstract void Delete();
 
-        protected virtual void Dispose(in bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
             _disposed = true;
@@ -34,7 +34,7 @@ namespace LibCyStd.LibCurl
 
         public override string ToString() => $"{GetType().Name}@{Handle}";
 
-        protected CurlMemory(in IntPtr handle, in NullPtrPolicy nullPtrPolicy)
+        protected CurlMemory(IntPtr handle, NullPtrPolicy nullPtrPolicy)
         {
             if (nullPtrPolicy == NullPtrPolicy.NotAllowed && handle == IntPtr.Zero)
                 ExnModule.InvalidArg("cannot init with NULL handle.", nameof(handle));
@@ -43,7 +43,7 @@ namespace LibCyStd.LibCurl
 
         ~CurlMemory() => Dispose(false);
 
-        public static implicit operator IntPtr(in CurlMemory mem)
+        public static implicit operator IntPtr(CurlMemory mem)
         {
             if (mem._disposed) ExnModule.ObjDisposed(mem.GetType().Name);
             return mem.Handle;
@@ -52,14 +52,14 @@ namespace LibCyStd.LibCurl
 
     public class CurlEzHandle : CurlMemory
     {
-        internal CurlEzHandle(in IntPtr handle) : base(handle, NullPtrPolicy.NotAllowed) { }
+        internal CurlEzHandle(IntPtr handle) : base(handle, NullPtrPolicy.NotAllowed) { }
 
         protected override void Delete() => libcurl.curl_easy_cleanup(Handle);
     }
 
     public class CurlMultiHandle : CurlMemory
     {
-        internal CurlMultiHandle(in IntPtr handle) : base(handle, NullPtrPolicy.NotAllowed) { }
+        internal CurlMultiHandle(IntPtr handle) : base(handle, NullPtrPolicy.NotAllowed) { }
 
         protected override void Delete()
         {
@@ -71,7 +71,7 @@ namespace LibCyStd.LibCurl
 
     public class CurlSlist : CurlMemory
     {
-        public CurlSlist(in IntPtr handle) : base(handle, NullPtrPolicy.Allowed) { }
+        public CurlSlist(IntPtr handle) : base(handle, NullPtrPolicy.Allowed) { }
 
         protected override void Delete()
         {
@@ -79,6 +79,6 @@ namespace LibCyStd.LibCurl
             libcurl.curl_slist_free_all(Handle);
         }
 
-        internal void SetHandle(in IntPtr handle) => Handle = handle;
+        internal void SetHandle(IntPtr handle) => Handle = handle;
     }
 }

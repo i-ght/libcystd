@@ -16,7 +16,7 @@ namespace LibCyStd.IO
     }
 
     /// <summary>
-    /// Use a instance of this class to specify to <see cref="Blacklist"/> that this blacklist should only exist in memory.
+    /// Use a instance of this class to specify to <see cref="Blacklist"/> that this blacklist should only exist memory.
     /// </summary>
     public class MemoryBlacklist : BlacklistKind
     {
@@ -46,14 +46,14 @@ namespace LibCyStd.IO
         private bool _loaded;
 
         /// <summary>
-        /// Creates a new instance of a <see cref="Blacklist"/>. Use an instance of <see cref="MemoryBlacklist"/> to keep this <see cref="Blacklist"/> only in memory. Use an instance of <see cref="FileBlacklist"/> to be able to load from file and write the contents of the blacklist to file.
+        /// Creates a new instance of a <see cref="Blacklist"/>. Use an instance of <see cref="MemoryBlacklist"/> to keep this <see cref="Blacklist"/> only memory. Use an instance of <see cref="FileBlacklist"/> to be able to load from file and write the contents of the blacklist to file.
         /// </summary>
         /// <param name="kind"></param>
         /// <exception cref="IOException"/>
         /// <exception cref="System.Security.SecurityException" />
         /// <exception cref="UnauthorizedAccessException" />
         /// <exception cref="PathTooLongException" />
-        public Blacklist(in BlacklistKind kind)
+        public Blacklist(BlacklistKind kind)
         {
             if (kind is FileBlacklist fileBlacklist)
             {
@@ -172,7 +172,7 @@ namespace LibCyStd.IO
             _loaded = true;
         }
 
-        public void Add(in string item)
+        public void Add(string item)
         {
             Check();
             if (_set.Add(item)) Write(item);
@@ -185,7 +185,7 @@ namespace LibCyStd.IO
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public void ThreadSafeAdd(in string item)
+        public void ThreadSafeAdd(string item)
         {
             Check();
             lock (_set) if (_set.Add(item)) Write(item);
@@ -197,7 +197,7 @@ namespace LibCyStd.IO
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public void ThreadSafeAdd(in IEnumerable<string> items)
+        public void ThreadSafeAdd(IEnumerable<string> items)
         {
             Check();
             lock (_set) Write(items.Where(_set.Add));
@@ -209,7 +209,7 @@ namespace LibCyStd.IO
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public bool ThreadSafeContains(in string item)
+        public bool ThreadSafeContains(string item)
         {
             Check();
             lock (_set) return _set.Contains(item);
@@ -221,7 +221,7 @@ namespace LibCyStd.IO
         /// <param name="item"></param>
         /// <exception cref="ObjectDisposedException"/>
         /// <exception cref="InvalidOperationException"/>
-        public bool Contains(in string item)
+        public bool Contains(string item)
         {
             Check();
             return _set.Contains(item);
@@ -240,7 +240,7 @@ namespace LibCyStd.IO
     }
 
     /// <summary>
-    /// Class that runs a loop in the background, checking a collection of cached items every 10 seconds. If the collection has over > 1000 items, the items are written to the specified file and the cache is cleared.
+    /// Class that runs a loop the background, checking a collection of cached items every 10 seconds. If the collection has over > 1000 items, the items are written to the specified file and the cache is cleared.
     /// </summary>
     public class WriteWorker : IDisposable
     {
@@ -302,14 +302,14 @@ namespace LibCyStd.IO
         /// Adds the items to the cache to be written.
         /// </summary>
         /// <param name="items"></param>
-        public void Add(in IEnumerable<string> items)
+        public void Add(IEnumerable<string> items)
         {
             CheckDisposed();
             lock (_set)
                 foreach (var item in items) _set.Add(item);
         }
 
-        public void Add(in string item)
+        public void Add(string item)
         {
             CheckDisposed();
             lock (_set)
@@ -324,7 +324,7 @@ namespace LibCyStd.IO
             _disposed = true;
         }
 
-        public WriteWorker(in string pathToFile)
+        public WriteWorker(string pathToFile)
         {
             _pathToFile = pathToFile;
             _cts = new CancellationTokenSource();

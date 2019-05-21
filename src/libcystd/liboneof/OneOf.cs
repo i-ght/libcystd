@@ -8,7 +8,7 @@ namespace LibCyStd.LibOneOf
         private readonly int _index;
         private readonly T0 _value0;
 
-        private OneOf(in int index, in T0 value0 = default)
+        private OneOf(int index, T0 value0 = default)
         {
             _index = index;
             _value0 = value0;
@@ -42,9 +42,9 @@ namespace LibCyStd.LibOneOf
             }
         }
 
-        public static implicit operator OneOf<T0>(in T0 t) => new OneOf<T0>(0, value0: t);
+        public static implicit operator OneOf<T0>(T0 t) => new OneOf<T0>(0, value0: t);
 
-        public void Switch(in Action<T0> f0)
+        public void Switch(Action<T0> f0)
         {
             if (_index == 0 && f0 != null)
             {
@@ -54,7 +54,7 @@ namespace LibCyStd.LibOneOf
             throw new InvalidOperationException();
         }
 
-        public TResult Match<TResult>(in Func<T0, TResult> f0)
+        public TResult Match<TResult>(Func<T0, TResult> f0)
         {
             if (_index == 0 && f0 != null)
             {
@@ -63,7 +63,7 @@ namespace LibCyStd.LibOneOf
             throw new InvalidOperationException();
         }
 
-        public static OneOf<T0> FromT0(in T0 input)
+        public static OneOf<T0> FromT0(T0 input)
         {
             return input;
         }
@@ -79,7 +79,7 @@ namespace LibCyStd.LibOneOf
             );
         }
 
-        public bool Equals(in OneOf<T0> other) =>
+        public bool Equals(OneOf<T0> other) =>
             _index == other._index
             && EqualityComparer<T0>.Default.Equals(_value0, other._value0);
 
@@ -232,7 +232,7 @@ namespace LibCyStd.LibOneOf
             return IsT1;
         }
 
-        private bool Equals(in OneOf<T0, T1> other)
+        private bool Equals(OneOf<T0, T1> other)
         {
             if (_index != other._index)
             {
@@ -479,7 +479,7 @@ namespace LibCyStd.LibOneOf
             return IsT2;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2> other)
+        private bool Equals(OneOf<T0, T1, T2> other)
         {
             if (_index != other._index)
             {
@@ -791,7 +791,7 @@ namespace LibCyStd.LibOneOf
             return IsT3;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2, T3> other)
+        private bool Equals(OneOf<T0, T1, T2, T3> other)
         {
             if (_index != other._index)
             {
@@ -1170,7 +1170,7 @@ namespace LibCyStd.LibOneOf
             return IsT4;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2, T3, T4> other)
+        private bool Equals(OneOf<T0, T1, T2, T3, T4> other)
         {
             if (_index != other._index)
             {
@@ -1618,7 +1618,7 @@ namespace LibCyStd.LibOneOf
             return IsT5;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5> other)
+        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5> other)
         {
             if (_index != other._index)
             {
@@ -2126,7 +2126,7 @@ namespace LibCyStd.LibOneOf
             return IsT6;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5, T6> other)
+        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5, T6> other)
         {
             if (_index != other._index)
             {
@@ -2706,7 +2706,7 @@ namespace LibCyStd.LibOneOf
             return IsT7;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5, T6, T7> other)
+        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5, T6, T7> other)
         {
             if (_index != other._index)
             {
@@ -3360,7 +3360,7 @@ namespace LibCyStd.LibOneOf
             return IsT8;
         }
 
-        private bool Equals(in OneOf<T0, T1, T2, T3, T4, T5, T6, T7, T8> other)
+        private bool Equals(OneOf<T0, T1, T2, T3, T4, T5, T6, T7, T8> other)
         {
             if (_index != other._index)
             {

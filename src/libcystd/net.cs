@@ -16,9 +16,9 @@ namespace LibCyStd.Net
         static TcpClientModule() => CrLfCrLf = new byte[] { 13, 10, 13, 10 };
 
         private static int Recv(
-            in Stream input,
-            in Stream output,
-            in int bufferSize)
+            Stream input,
+            Stream output,
+            int bufferSize)
         {
             using var memOwner = MemoryPool<byte>.Shared.Rent(bufferSize);
             var span = memOwner.Memory.Span;
@@ -94,7 +94,7 @@ namespace LibCyStd.Net
             }
         }
 
-        private static ReadOnlyMemory<byte> HttpConnect(in Proxy proxy, in string host, in int port)
+        private static ReadOnlyMemory<byte> HttpConnect(Proxy proxy, string host, int port)
         {
             var reqLineCnt = proxy.Credentials.IsSome ? 5 : 4;
             var request = new List<string>(reqLineCnt);
@@ -159,7 +159,7 @@ namespace LibCyStd.Net
             Password = password;
         }
 
-        public static Option<BasicNetworkCredentials> TryParse(in string input)
+        public static Option<BasicNetworkCredentials> TryParse(string input)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return Option.None;

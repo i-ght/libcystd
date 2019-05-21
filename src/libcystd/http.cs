@@ -129,7 +129,7 @@ namespace LibCyStd.Http
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static string UrlEncode(in string input)
+        public static string UrlEncode(string input)
         {
             var sb = new StringBuilder(input.Length + 50);
             void Append(char ch)
@@ -142,20 +142,19 @@ namespace LibCyStd.Http
             return sb.ToString();
         }
 
-        public static string UrlEncodeKvp(in (string key, string val) kvp)
+        public static string UrlEncodeKvp((string key, string val) kvp)
         {
             var (key, val) = kvp;
             return $"{UrlEncode(key)}={UrlEncode(val)}";
         }
 
-        public static string UrlEncodeKvp((string key, string val) kvp) => UrlEncodeKvp(in kvp);
 
         /// <summary>
         /// Url encodes sequence of <see cref="ValueTuple"/>s;.
         /// </summary>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static string UrlEncodeSeq(in IEnumerable<(string key, string value)> sequence) =>
+        public static string UrlEncodeSeq(IEnumerable<(string key, string value)> sequence) =>
             string.Join("&", sequence.Select(UrlEncodeKvp));
 
         public static List<(string, string)> EmptyHeadersList() => new List<(string, string)>();
@@ -172,13 +171,13 @@ namespace LibCyStd.Http
         public bool Secure { get; }
 
         public Cookie(
-            in string name,
-            in string value,
-            in string path,
-            in string domain,
-            in DateTimeOffset expires,
-            in bool httpOnly,
-            in bool secure)
+            string name,
+            string value,
+            string path,
+            string domain,
+            DateTimeOffset expires,
+            bool httpOnly,
+            bool secure)
         {
             Name = name;
             Value = value;
@@ -209,13 +208,13 @@ namespace LibCyStd.Http
 
         public override string ToString() => $"{Name}={Value}";
 
-        private static string TryParseInp(in string input)
+        private static string TryParseInp(string input)
         {
             var tmp = input;
             return input.InvariantStartsWith("Set-Cookie:") ? tmp.Substring(11).Trim() : tmp;
         }
 
-        private static Option<(string key, string val)> TryParseCookieNvp(in string input)
+        private static Option<(string key, string val)> TryParseCookieNvp(string input)
         {
             var s = input.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
             if (s.Length >= 2)
@@ -230,7 +229,7 @@ namespace LibCyStd.Http
             }
         }
 
-        private static Cookie ParseAttribs(in string name, in string value, in string defDomain, in IEnumerable<string> attributes)
+        private static Cookie ParseAttribs(string name, string value, string defDomain, IEnumerable<string> attributes)
         {
             var (expires, domain, path, secure, httpOnly) =
                 (DateTimeOffset.MaxValue, defDomain, "/", false, false);
@@ -268,7 +267,7 @@ namespace LibCyStd.Http
             return new Cookie(name, value, path, domain, expires, httpOnly, secure);
         }
 
-        public static Option<Cookie> TryParse(in string input, in string defaultDomain)
+        public static Option<Cookie> TryParse(string input, string defaultDomain)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return Option.None;
@@ -341,7 +340,7 @@ namespace LibCyStd.Http
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
         private StringHttpContent(in ReadOnlySpan<byte> content) : base(content) { }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
-        public StringHttpContent(in string str) : this(ReadOnlySpanModule.OfString(str)) { _str = str; }
+        public StringHttpContent(string str) : this(ReadOnlySpanModule.OfString(str)) { _str = str; }
         public override string ToString() => _str;
     }
 
@@ -351,7 +350,7 @@ namespace LibCyStd.Http
     public class EncodedFormValuesHttpContent : HttpContent
     {
         private EncodedFormValuesHttpContent(in ReadOnlySpan<byte> content) : base(content) { }
-        public EncodedFormValuesHttpContent(in IEnumerable<(string, string)> sequence) : this(ReadOnlySpanModule.OfString(HttpUtils.UrlEncodeSeq(sequence))) { }
+        public EncodedFormValuesHttpContent(IEnumerable<(string, string)> sequence) : this(ReadOnlySpanModule.OfString(HttpUtils.UrlEncodeSeq(sequence))) { }
     }
 
     public static class HttpVersion
@@ -399,7 +398,7 @@ namespace LibCyStd.Http
         }
 
 #pragma warning disable CS8618 // Non-nullable field is uninitialized.
-        public HttpReq(in string method, in Uri uri)
+        public HttpReq(string method, Uri uri)
         {
             if (!uri.Scheme.InvariantStartsWith("http"))
                 ExnModule.InvalidArg($"{uri} is not a http/https uri.", nameof(uri));
@@ -414,8 +413,8 @@ namespace LibCyStd.Http
 #pragma warning restore RCS1139
 
         public HttpReq(
-            in string method,
-            in string uri)
+            string method,
+            string uri)
         {
             if (!Uri.TryCreate(uri, UriKind.Absolute, out var ruri))
                 ExnModule.InvalidArg($"{uri} is not a valid Uri.", nameof(uri));
@@ -427,7 +426,7 @@ namespace LibCyStd.Http
         }
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
 
-        private static string Http1ReqToStr(in HttpReq req)
+        private static string Http1ReqToStr(HttpReq req)
         {
             var sb = new StringBuilder(512);
             sb.Append(req.HttpMethod)
@@ -453,7 +452,7 @@ namespace LibCyStd.Http
             return sb.AppendLine().ToString();
         }
 
-        private static string Http2ReqToStr(in HttpReq req)
+        private static string Http2ReqToStr(HttpReq req)
         {
             var sb = new StringBuilder(512);
             sb.Append(":method: ").AppendLine(req.HttpMethod);
@@ -520,10 +519,10 @@ namespace LibCyStd.Http
         }
 
         public HttpResp(
-            in HttpStatusCode statusCode,
-            in Uri uri,
-            in ReadOnlyDictionary<string, ReadOnlyCollection<string>> headers,
-            in ReadOnlyCollection<Cookie> cookies,
+            HttpStatusCode statusCode,
+            Uri uri,
+            ReadOnlyDictionary<string, ReadOnlyCollection<string>> headers,
+            ReadOnlyCollection<Cookie> cookies,
             in ReadOnlySpan<byte> contentData)
         {
             StatusCode = statusCode;
@@ -564,13 +563,13 @@ namespace LibCyStd.Http
     /// </summary>
     public static class HttpRespModule
     {
-        public static bool RespIsExpected(in HttpResp resp, in HttpStatusCode stat, in string chars) =>
+        public static bool RespIsExpected(HttpResp resp, HttpStatusCode stat, string chars) =>
             resp.StatusCode == stat && resp.Content.InvariantContains(chars);
 
-        public static bool RespIsExpected(in HttpResp resp, in HttpStatusCode stat) =>
+        public static bool RespIsExpected(HttpResp resp, HttpStatusCode stat) =>
             resp.StatusCode == stat;
 
-        public static void CheckExpect(in HttpResp resp, in Func<HttpResp, bool> predicate, in Action onUnexpected)
+        public static void CheckExpect(HttpResp resp, Func<HttpResp, bool> predicate, Action onUnexpected)
         {
             if (!predicate(resp)) onUnexpected();
         }
@@ -586,13 +585,13 @@ namespace LibCyStd.Http
         public Version Version { get; }
         public HttpStatusCode StatusCode { get; }
 
-        public HttpStatusInfo(in Version version, in HttpStatusCode statusCode)
+        public HttpStatusInfo(Version version, HttpStatusCode statusCode)
         {
             Version = version;
             StatusCode = statusCode;
         }
 
-        private static string VersionStr(in string input)
+        private static string VersionStr(string input)
         {
             return input == "2" ? "2.0" : input;
         }
@@ -602,7 +601,7 @@ namespace LibCyStd.Http
             return $"HTTP/{Version} {StatusCode}";
         }
 
-        public static Option<HttpStatusInfo> TryParse(in string input)
+        public static Option<HttpStatusInfo> TryParse(string input)
         {
             if (!input.InvariantStartsWith("http"))
                 return Option.None;
@@ -634,7 +633,7 @@ namespace LibCyStd.Http
             Headers = headers;
         }
 
-        public static Option<HttpMsgHeader> TryParse(in string input)
+        public static Option<HttpMsgHeader> TryParse(string input)
         {
             if (string.IsNullOrEmpty(input))
                 return Option.None;
@@ -643,7 +642,7 @@ namespace LibCyStd.Http
             if (sp.Length < 2)
                 return Option.None;
 
-            Option<HttpMsgHeader> TryParseWithInfo(in HttpStatusInfo info, in IEnumerable<string> headers)
+            Option<HttpMsgHeader> TryParseWithInfo(HttpStatusInfo info, IEnumerable<string> headers)
             {
                 var h = new Dictionary<string, List<string>>(headers.Count(), StringComparer.OrdinalIgnoreCase);
                 var kvps = headers.Choose(s => StringModule.TryParseKvp(s, ':'));
@@ -714,7 +713,7 @@ namespace LibCyStd.Http
                 }
             }
 
-            private static CurlSlist CreateSList(in HttpReq req)
+            private static CurlSlist CreateSList(HttpReq req)
             {
                 var slist = libcurl.curl_slist_append(new CurlSlist(IntPtr.Zero), "Expect:");
                 slist = libcurl.curl_slist_append(slist, "Accept:");
@@ -723,7 +722,7 @@ namespace LibCyStd.Http
                 return slist;
             }
 
-            private static unsafe ulong Write(byte* data, in ulong size, in ulong nmemb, in Stream stream)
+            private static unsafe ulong Write(byte* data, ulong size, ulong nmemb, Stream stream)
             {
                 var len = size * nmemb;
                 var intLen = (int)len;
@@ -762,7 +761,7 @@ namespace LibCyStd.Http
                 return len;
             }
 
-            private static int ContentLen(in IDictionary<string, List<string>> headers)
+            private static int ContentLen(IDictionary<string, List<string>> headers)
             {
                 if (headers.ContainsKey("content-length"))
                 {
@@ -800,7 +799,7 @@ namespace LibCyStd.Http
                 HeadersSlist.Dispose();
             }
 
-            public unsafe HttpReqState(in HttpReq req)
+            public unsafe HttpReqState(HttpReq req)
             {
                 _contentMemeStream = Option.None;
                 _statuses = new List<HttpStatusInfo>(1);
@@ -823,9 +822,9 @@ namespace LibCyStd.Http
 #else
         private
 #endif
-            static readonly ConcurrentQueue<CurlMultiAgent<HttpReqState>> Agents;
+            static readonly Queue<CurlMultiAgent<HttpReqState>> Agents;
 
-        private static string CurlCodeStrErr(in CURLcode code)
+        private static string CurlCodeStrErr(CURLcode code)
         {
             var ptr = libcurl.curl_easy_strerror(code);
             return Marshal.PtrToStringAnsi(ptr);
@@ -838,8 +837,13 @@ namespace LibCyStd.Http
                 Environment.FailFast($"curl_global_init returned {initResult} ~ {CurlCodeStrErr(initResult)}");
             try
             {
-                var q = new ConcurrentQueue<CurlMultiAgent<HttpReqState>>();
-                for (var i = 0; i < 6; i++)
+#if DEBUG
+                var max = 1;
+#else
+                var max = 6;
+#endif
+                var q = new Queue<CurlMultiAgent<HttpReqState>>();
+                for (var i = 0; i < max; i++)
                 {
                     var agent = new CurlMultiAgent<HttpReqState>(200);
                     q.Enqueue(agent);
@@ -977,7 +981,7 @@ namespace LibCyStd.Http
         }
 
         // parses response from native curl easy handle
-        private static void ParseResp(in CurlEzHandle ez, in HttpReqState state)
+        private static void ParseResp(CurlEzHandle ez, HttpReqState state)
         {
             if (state.Statuses.Count == 0)
                 CurlModule.CurlEx("malformed http response received. no status info parsed.");
@@ -1065,13 +1069,15 @@ namespace LibCyStd.Http
 
         private static CurlMultiAgent<HttpReqState> NextCurlMultiAgent()
         {
-            if (!Agents.TryDequeue(out var agent))
-                ExnModule.InvalidOp("Failed to dequeue curl multi agent.");
-            Agents.Enqueue(agent);
-            return agent;
+            lock (Agents)
+            {
+                var agent = Agents.Dequeue();
+                Agents.Enqueue(agent);
+                return agent;
+            }
         }
 
-        public static Task<HttpResp> RetrRespAsync(in HttpReq req)
+        public static Task<HttpResp> RetrRespAsync(HttpReq req)
         {
             if (req.ProxyRequired && !req.Proxy.IsSome)
                 ExnModule.InvalidArg("Proxy is required for this request.", nameof(req));
